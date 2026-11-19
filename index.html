@@ -1,0 +1,2642 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EHS BOYD by EATON - FIRE Checksheet System</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- QRCode.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- HTML5-QRCode Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
+      <!-- Brand Logo (BOYD THERMAL by EATON) -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateHome()">
+        <div class="flex flex-col items-start leading-none select-none">
+          <span class="text-xl sm:text-2xl font-black text-slate-950 tracking-tighter">BOYD</span>
+          <span class="text-[9px] sm:text-[10px] font-semibold text-slate-700 tracking-[0.25em] uppercase -mt-0.5">THERMAL</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-[10px] text-slate-500 font-medium lowercase">by</span>
+            <span class="text-sm sm:text-base font-black tracking-tight" style="color: #005EB8;">EAT•N</span>
+          </div>
+        </div>
+        <div class="h-8 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+        <div class="hidden sm:block">
+          <div class="text-xs font-black uppercase text-slate-900 tracking-wider">Hệ Thống Kiểm tra định kỳ thiết bị PCCC</div>
+          <div class="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">EHS Department • Boyd Vietnam</div>
+        </div>
+      </div>
+
+      <!-- User Session & Navigation Status -->
+      <div class="flex items-center gap-2">
+        <div id="cloud-sync-badge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span> Chế độ Offline (Local)
+        </div>
+        <div id="nav-user-badge" class="flex items-center gap-2"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold hidden transition-all duration-300">
+    <i class="fas fa-bell"></i>
+    <span id="toast-msg">Thông báo hệ thống</span>
+  </div>
+
+  <!-- ================= MAIN APPLICATION CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+
+    <!-- ================= VIEW 1: AUTHENTICATION / PORTAL (CLIENT 1) ================= -->
+    <section id="section-login" class="max-w-md mx-auto py-8 sm:py-12">
+      <div class="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-8 space-y-6">
+        
+        <!-- BOYD THERMAL by EATON Logo in Login -->
+        <div class="text-center space-y-2">
+          <div class="inline-flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-inner mb-1 select-none">
+            <span class="text-2xl font-black text-slate-950 tracking-tighter leading-none">BOYD</span>
+            <span class="text-[10px] font-bold text-slate-700 tracking-[0.3em] uppercase mt-0.5">THERMAL</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span class="text-[11px] text-slate-500 font-medium lowercase">by</span>
+              <span class="text-base font-black tracking-tight" style="color: #005EB8;">EAT•N</span>
+            </div>
+          </div>
+          <h2 class="text-lg sm:text-xl font-black text-slate-900">EHS BOYD by EATON</h2>
+          <p class="text-xs text-slate-500">Hệ thống IoT kiểm tra định kỳ thiết bị PCCC</p>
+        </div>
+
+        <!-- Role Select Tabs: OWNER vs CHECKER -->
+        <div class="flex bg-slate-100 p-1 rounded-xl">
+          <button id="tab-btn-owner" onclick="switchLoginTab('owner')" class="flex-1 py-2 rounded-lg font-bold text-xs bg-white text-slate-800 shadow-sm transition-all">
+            <i class="fas fa-user-tie mr-1.5 text-indigo-600"></i> OWNER
+          </button>
+          <button id="tab-btn-checker" onclick="switchLoginTab('checker')" class="flex-1 py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800 transition-all">
+            <i class="fas fa-clipboard-check mr-1.5 text-emerald-600"></i> CHECKER
+          </button>
+        </div>
+
+        <!-- OWNER Login Form (Default admin / admin) -->
+        <form id="form-login-owner" onsubmit="event.preventDefault(); handleLoginOwner();" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tài khoản Quản lý (OWNER)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                <i class="fas fa-user"></i>
+              </span>
+              <input type="text" id="login-owner-user" required placeholder="Nhập tài khoản OWNER" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                <i class="fas fa-lock"></i>
+              </span>
+              <input type="password" id="login-owner-pass" required placeholder="Nhập mật khẩu" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-sign-in-alt"></i> Đăng Nhập Quản Trị
+          </button>
+        </form>
+
+        <!-- CHECKER Login Form -->
+        <form id="form-login-checker" onsubmit="event.preventDefault(); handleLoginChecker();" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Chọn tài khoản Kiểm tra (Checker)</label>
+            <div class="relative">
+              <select id="login-checker-select" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                <!-- Injected via JS -->
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu Checker</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                <i class="fas fa-key"></i>
+              </span>
+              <input type="password" id="login-checker-pass" required placeholder="Nhập mật khẩu được cấp" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-clipboard-check"></i> LOGIN
+          </button>
+        </form>
+
+        <!-- Separator -->
+        <div class="relative flex py-1 items-center">
+          <div class="flex-grow border-t border-slate-200"></div>
+          <span class="flex-shrink mx-3 text-slate-400 text-[11px] font-bold uppercase">Hoặc</span>
+          <div class="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <!-- AUDITOR / GUEST Access Button -->
+        <div>
+          <button onclick="handleLoginGuest()" class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-clipboard-user text-amber-500"></i> Truy Cập Dành Cho AUDITOR / GUEST
+          </button>
+          <p class="text-center text-[10px] text-slate-500 mt-2 font-medium">Dành cho Auditor kiểm tra lịch sử thiết bị và xem bảng tổng hợp</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: OWNER WORKSPACE ================= -->
+    <section id="section-owner" class="space-y-6 hidden">
+      <!-- OWNER Sub-navigation -->
+      <div class="bg-white p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Khu Vực Quản Trị Hệ Thống (OWNER)</span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="owner-subtab-devices" onclick="switchOwnerSubTab('devices')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-sm transition-all">
+            <i class="fas fa-boxes-stacked mr-1.5"></i> Quản Lý Thiết Bị
+          </button>
+          <button id="owner-subtab-qr" onclick="switchOwnerSubTab('qr')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all">
+            <i class="fas fa-qrcode mr-1.5"></i> Bảng Quản lý QR
+          </button>
+          <button id="owner-subtab-reports" onclick="switchOwnerSubTab('reports')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all">
+            <i class="fas fa-chart-pie mr-1.5"></i> Báo Cáo & Lịch Sử
+          </button>
+          <button id="owner-subtab-accounts" onclick="switchOwnerSubTab('accounts')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all">
+            <i class="fas fa-users-gear mr-1.5"></i> Cấp Quyền Checker
+          </button>
+          <button onclick="openChangePasswordModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all flex items-center gap-1.5">
+            <i class="fas fa-key"></i> Đổi pass OWNER
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Device Management (Loại -> Mã -> Xưởng -> Vị trí -> Thao tác -> Lịch sử -> Con mắt xem chi tiết) -->
+      <div id="owner-view-devices" class="space-y-4">
+        <!-- Controls: Filters, Sort & Actions -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <!-- Filter by Device Type -->
+            <select id="owner-filter-type" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
+              <option value="">Tất cả loại thiết bị</option>
+              <option value="Bình bột ABC">Bình bột ABC</option>
+              <option value="Bình khí CO2">Bình khí CO2</option>
+              <option value="Họng chữa cháy">Họng chữa cháy</option>
+              <option value="Chuông/ đèn/ còi báo cháy">Chuông/ đèn/ còi báo cháy</option>
+              <option value="Tủ báo cháy">Tủ báo cháy</option>
+              <option value="Quạt hút khói">Quạt hút khói</option>
+            </select>
+
+            <!-- Filter by Workshop -->
+            <select id="owner-filter-workshop" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
+              <option value="">Tất cả xưởng</option>
+              <option value="Xưởng 1">Xưởng 1</option>
+              <option value="Xưởng 2">Xưởng 2</option>
+              <option value="Xưởng 3">Xưởng 3</option>
+              <option value="Xưởng 4">Xưởng 4</option>
+            </select>
+
+            <!-- Search input -->
+            <input type="text" id="owner-search-code" oninput="renderOwnerDeviceTable()" placeholder="Tìm theo mã hoặc vị trí..." class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
+
+          <button onclick="openAddDeviceModal()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-plus-circle"></i> Thêm Thiết Bị PCCC
+          </button>
+        </div>
+
+        <!-- Devices Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th class="py-3 px-3">Loại thiết bị</th>
+                  <th class="py-3 px-3">Mã thiết bị</th>
+                  <th class="py-3 px-3">Xưởng</th>
+                  <th class="py-3 px-3">Vị trí</th>
+                  <th class="py-3 px-3 text-center">Thao tác</th>
+                  <th class="py-3 px-3">Lịch sử thêm/sửa</th>
+                  <th class="py-3 px-3 text-center">Xem checksheet</th>
+                </tr>
+              </thead>
+              <tbody id="owner-device-table-body" class="divide-y divide-slate-100">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: QR Management (Export to Excel & In 18 Tem/A4 Dọc) -->
+      <div id="owner-view-qr" class="space-y-4 hidden">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý Danh Sách & Mã Tem QR</h3>
+            <p class="text-[11px] text-slate-500">Mã QR tự động tạo theo mã định danh của từng thiết bị trong nhà máy</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Nút Xuất file Excel (.xlsx) duy nhất -->
+            <button onclick="exportDevicesToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
+              <i class="fas fa-file-excel text-emerald-200 text-sm"></i> Xuất File Excel (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Khung thống kê số lượng thiết bị -->
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-qrcode text-emerald-600"></i>
+            <span>Mỗi thiết bị khi xuất file Excel sẽ được bố trí gói gọn trong <b>1 ô duy nhất</b> (gồm: Loại thiết bị, Mã thiết bị, Xưởng & Vị trí).</span>
+          </div>
+          <span class="font-bold text-[11px] bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+            Tổng cộng: <span id="owner-qr-total-count" class="text-emerald-600 font-mono">0</span> thiết bị
+          </span>
+        </div>
+
+        <!-- QR Cards Grid hiển thị trên web -->
+        <div id="owner-qr-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Reports & Inspection Stats (Visual Chart with Month & Year Filter) -->
+      <div id="owner-view-reports" class="space-y-4 hidden">
+        <!-- Month & Year Sort Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-filter text-indigo-600 text-sm"></i>
+            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Lọc Báo Cáo Theo Chu Kỳ Kiểm Tra:</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="report-filter-month" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
+              <!-- Months 1 -> 12 -->
+            </select>
+            <select id="report-filter-year" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
+              <!-- Years -->
+            </select>
+          </div>
+        </div>
+
+        <div id="report-dashboard-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab 4: Checker Accounts Management (with Change Password per Checker) -->
+      <div id="owner-view-accounts" class="space-y-4 hidden">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 max-w-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý & Cấp Mới Tài Khoản CHECKER</h4>
+              <p class="text-[11px] text-slate-400">Các tài khoản nhân viên kiểm tra hiện trường</p>
+            </div>
+            <button onclick="addNewChecker()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1.5">
+              <i class="fas fa-user-plus"></i> Thêm Checker
+            </button>
+          </div>
+          <div id="owner-checker-list" class="space-y-2">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: CHECKER WORKSPACE ================= -->
+    <section id="section-checker" class="space-y-6 hidden">
+      <!-- Direct QR Scan Bar -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Khu Vực Kiểm Tra Hiện Trường (CHECKER)</span>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-[11px] text-slate-500 font-medium">Chu kỳ đang kiểm tra:</span>
+            <span id="checker-current-cycle-badge" class="px-2.5 py-0.5 rounded-lg text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">Tháng --/----</span>
+            <button onclick="openCheckerCycleModal()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold underline ml-1">Đổi chu kỳ</button>
+          </div>
+        </div>
+        <!-- Camera Scan QR Button (Primary Action) -->
+        <button onclick="toggleQRScannerModal(true, 'checker')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-lg flex items-center justify-center gap-2.5 transition-all transform active:scale-95">
+          <i class="fas fa-qrcode text-emerald-200 text-base"></i> Quét Mã Tem QR Thiết Bị
+        </button>
+      </div>
+
+      <!-- Pending Devices List (Only Unchecked Devices, with Workshop filter, View info only - NO Checksheet trigger) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h4 class="text-xs font-black text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fas fa-clock"></i> Danh Sách Thiết Bị Chưa Checksheet (Cần Kiểm Tra)
+            </h4>
+            <p class="text-[11px] text-slate-400">Danh sách thiết bị chưa được kiểm tra trong chu kỳ đã chọn</p>
+          </div>
+          <!-- Sort by Workshop -->
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <label class="text-[11px] font-bold text-slate-600 whitespace-nowrap"><i class="fas fa-industry text-slate-400 mr-1"></i> Chọn xưởng:</label>
+            <select id="checker-filter-workshop" onchange="renderCheckerPendingDevices()" class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-emerald-500">
+              <option value="">Tất cả xưởng</option>
+              <option value="Xưởng 1">Xưởng 1</option>
+              <option value="Xưởng 2">Xưởng 2</option>
+              <option value="Xưởng 3">Xưởng 3</option>
+              <option value="Xưởng 4">Xưởng 4</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="checker-pending-devices-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- ACTIVE CHECKSHEET FORM (Strictly Opened ONLY via QR Scan) -->
+      <div id="checksheet-form-card" class="bg-white rounded-3xl border-2 border-emerald-500/80 shadow-2xl p-5 sm:p-7 space-y-6 hidden">
+        <!-- Checksheet Header -->
+        <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="cs-device-type-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800">
+                Bình bột ABC
+              </span>
+              <span id="cs-device-id" class="font-mono text-sm sm:text-base font-black text-slate-900">ABC-001</span>
+            </div>
+            <div id="cs-device-location" class="text-xs text-slate-500 font-medium mt-1">Xưởng 1 - Cột D3 Tầng 2</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs font-bold text-slate-700">Ngày: <span id="cs-date-display" class="font-mono">--/--/----</span></div>
+            <div class="text-[11px] text-slate-400">Checker: <span id="cs-checker-display" class="font-bold text-slate-700">--</span></div>
+          </div>
+        </div>
+
+        <!-- Checklist Items with Mandatory Asterisk (*) -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-800">Các Hạng Mục Kiểm Tra Bắt Buộc <span class="text-rose-500">(*)</span></h4>
+            <span class="text-[11px] text-slate-400">Chọn OK hoặc NG cho từng tiêu chí</span>
+          </div>
+
+          <div id="checksheet-items-list" class="space-y-2">
+            <!-- Dynamic Criteria injected based on ABC, CO2, Cabinet, etc. -->
+          </div>
+        </div>
+
+        <!-- CAMERA CAPTURE SECTION (NO FILE UPLOAD ALLOWED - ONLY LIVE CAMERA CAPTURE) -->
+        <div class="space-y-2 border-t border-slate-100 pt-4">
+          <label class="block text-xs font-bold text-slate-800">
+            Chụp Ảnh Hiện Trường <span class="text-rose-500 font-bold">* (Bắt Buộc)</span>
+          </label>
+          <p class="text-[11px] text-slate-400 italic">Hệ thống kích hoạt camera trực tiếp, ngăn chặn chọn ảnh cũ từ bộ sưu tập để đảm bảo tính khách quan.</p>
+
+          <!-- Action buttons for Photo Capture -->
+          <div class="flex flex-col sm:flex-row items-center gap-3">
+            <button type="button" id="camera-prompt-btn" onclick="triggerCameraCapture()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl text-xs shadow flex items-center justify-center gap-2">
+              <i class="fas fa-camera text-emerald-400"></i> Bật Camera Chụp Ảnh Ngay
+            </button>
+            <!-- Native file input with strict camera-only attributes (hidden) -->
+            <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleCameraFileInput(event)">
+
+            <!-- Photo Preview Area -->
+            <div id="captured-photo-wrapper" class="hidden items-center gap-3">
+              <div class="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-100 shadow-sm">
+                <img id="captured-preview-img" src="" alt="Captured" class="w-full h-full object-cover">
+              </div>
+              <div>
+                <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                  <i class="fas fa-check-circle"></i> Đã chụp ảnh hợp lệ
+                </span>
+                <button type="button" onclick="removeCapturedPhoto()" class="block text-[11px] text-rose-500 hover:underline mt-1">
+                  Chụp lại ảnh khác
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes / Remarks -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Ghi Chú Thêm (Nếu có phát hiện bất thường)</label>
+          <textarea id="checksheet-notes" rows="2" placeholder="Ví dụ: Áp suất giảm nhẹ, tem kiểm định còn hạn..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="document.getElementById('checksheet-form-card').classList.add('hidden')" class="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-800">
+            Hủy Bỏ
+          </button>
+          <button type="button" id="btn-submit-checksheet" onclick="submitChecksheet()" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-lg transition-all flex items-center gap-2">
+            <i class="fas fa-paper-plane"></i> Hoàn Thành & Gửi Checksheet
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: GUEST / AUDITOR WORKSPACE (QR & TOTAL) ================= -->
+    <section id="section-guest" class="space-y-6 hidden">
+      <!-- Top banner for GUEST / AUDITOR -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu & Báo Cáo Tổng Hợp (TOTAL)</span>
+        </div>
+        <!-- Scan QR for Guest / Auditor -->
+        <button onclick="toggleQRScannerModal(true, 'guest')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
+          <i class="fas fa-qrcode"></i> Quét QR Tra Cứu Thiết Bị
+        </button>
+      </div>
+
+      <!-- Quick Search Code Input -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
+        <input type="text" id="guest-input-code" placeholder="Nhập mã thiết bị (ví dụ: ABC-AGM-GF2-D/03-0004)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500">
+        <button onclick="searchGuestDeviceHistory()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs">
+          Tìm Kiếm
+        </button>
+      </div>
+
+      <!-- Search Result Display for Guest -->
+      <div id="guest-history-results"></div>
+
+      <!-- TOTAL DASHBOARD FOR GUEST (Identical to OWNER Report Dashboard) -->
+      <div class="space-y-4">
+        <!-- Month & Year Filter for Guest Total Dashboard -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-chart-column text-amber-500 text-sm"></i>
+            <span class="text-xs font-black uppercase tracking-wider text-slate-800">BẢNG TỔNG HỢP TOÀN NHÀ MÁY (TOTAL)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500 font-medium">Chu kỳ:</span>
+            <select id="guest-filter-month" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500">
+              <!-- Months -->
+            </select>
+            <select id="guest-filter-year" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500">
+              <!-- Years -->
+            </select>
+          </div>
+        </div>
+
+        <div id="guest-total-dashboard-container">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL: CHECKER SELECT INSPECTION CYCLE ================= -->
+  <div id="modal-checker-cycle" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+            <i class="fas fa-calendar-check text-white"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black uppercase tracking-wide">Chọn Tháng Kiểm Tra</h3>
+            <p class="text-[11px] text-emerald-100">Dữ liệu sẽ link tự động vào Báo Cáo</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p class="text-xs text-slate-600">
+          Vui lòng xác định chu kỳ tháng kiểm tra trước khi tiến hành quét mã và gửi checksheet:
+        </p>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Tháng:</label>
+            <select id="cycle-select-month" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
+              <!-- Rendered via JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Năm:</label>
+            <select id="cycle-select-year" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
+              <!-- Rendered via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] flex items-start gap-2">
+          <i class="fas fa-circle-info text-amber-500 mt-0.5"></i>
+          <span>Kết quả checksheet sẽ được cập nhật trực tiếp vào hệ thống báo cáo theo tháng đã chọn.</span>
+        </div>
+
+        <button onclick="confirmCheckerCycle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-arrow-right"></i> Bắt Đầu Kiểm Tra
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ADD / EDIT DEVICE (OWNER) ================= -->
+  <div id="modal-device-form" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <h3 id="modal-device-title" class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-fire-extinguisher text-emerald-400"></i> Thêm Thiết Bị PCCC
+        </h3>
+        <button onclick="closeDeviceModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Loại thiết bị: <span class="text-rose-500">*</span></label>
+          <select id="form-device-type" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500">
+            <option value="Bình bột ABC">Bình bột ABC</option>
+            <option value="Bình khí CO2">Bình khí CO2</option>
+            <option value="Họng chữa cháy">Họng chữa cháy</option>
+            <option value="Chuông/ đèn/ còi báo cháy">Chuông/ đèn/ còi báo cháy</option>
+            <option value="Tủ báo cháy">Tủ báo cháy</option>
+            <option value="Quạt hút khói">Quạt hút khói</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mã thiết bị: <span class="text-rose-500">*</span></label>
+          <input type="text" id="form-device-code" placeholder="Ví dụ: ABC-AGM-GF2-D/03-0006" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-1 focus:ring-emerald-500 uppercase">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Khu vực / Xưởng: <span class="text-rose-500">*</span></label>
+          <select id="form-device-workshop" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500">
+            <option value="Xưởng 1">Xưởng 1</option>
+            <option value="Xưởng 2">Xưởng 2</option>
+            <option value="Xưởng 3">Xưởng 3</option>
+            <option value="Xưởng 4">Xưởng 4</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Vị trí cụ thể: <span class="text-rose-500">*</span></label>
+          <input type="text" id="form-device-location" placeholder="Ví dụ: Cột D3 Tầng 2 cạnh thang máy..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500">
+        </div>
+
+        <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeDeviceModal()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700">Hủy</button>
+          <button onclick="saveDeviceModalData()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg shadow">
+            Lưu Thiết Bị
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: VIEW DEVICE INSPECTION HISTORY (EYE ICON) ================= -->
+  <div id="modal-device-history" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-history text-indigo-400"></i> Lịch Sử Checksheet Thiết Bị
+        </h3>
+        <button onclick="closeDeviceHistoryModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div id="history-modal-device-info" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh Sách Lượt Kiểm Tra</h4>
+          <div id="history-modal-inspections-list" class="space-y-2.5">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: VIEW DEVICE INFO ONLY (CHECKER - NO CHECKSHEET) ================= -->
+  <div id="modal-checker-view-device" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+          <i class="fas fa-circle-info text-emerald-400"></i> Thông Tin Vị Trí Thiết Bị
+        </h3>
+        <button onclick="closeCheckerViewModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-3 text-xs">
+        <div class="space-y-1">
+          <span id="cv-device-type" class="px-2 py-0.5 rounded text-[10px] font-bold"></span>
+          <div id="cv-device-code" class="text-base font-mono font-black text-slate-900 mt-1"></div>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+          <div class="text-slate-600"><b>Khu vực:</b> <span id="cv-device-workshop"></span></div>
+          <div class="text-slate-600"><b>Vị trí cụ thể:</b> <span id="cv-device-location"></span></div>
+        </div>
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[11px] flex items-start gap-2">
+          <i class="fas fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+          <span>Bạn <b>không thể checksheet trực tiếp</b> từ danh sách này. Vui lòng di chuyển tới vị trí thiết bị và dùng nút <b>"Quét Mã Tem QR"</b> để mở checksheet!</span>
+        </div>
+        <div class="pt-2 flex justify-end">
+          <button onclick="closeCheckerViewModal()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded-xl text-xs">
+            Đã Hiểu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CHANGE OWNER PASSWORD ================= -->
+  <div id="modal-change-password" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-key text-amber-400"></i> Đổi Mật Khẩu OWNER
+        </h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mật khẩu hiện tại: <span class="text-rose-500">*</span></label>
+          <input type="password" id="owner-old-pass" placeholder="Nhập mật khẩu cũ..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mật khẩu mới: <span class="text-rose-500">*</span></label>
+          <input type="password" id="owner-new-pass" placeholder="Nhập mật khẩu mới..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Xác nhận mật khẩu mới: <span class="text-rose-500">*</span></label>
+          <input type="password" id="owner-confirm-pass" placeholder="Nhập lại mật khẩu mới..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500">
+        </div>
+
+        <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeChangePasswordModal()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700">Hủy</button>
+          <button onclick="submitChangeOwnerPassword()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg shadow">
+            Cập Nhật Mật Khẩu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CAMERA QR SCANNER ================= -->
+  <div id="modal-qr-scanner" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+          <i class="fas fa-camera text-emerald-400"></i> Quét Mã Tem QR Thiết Bị
+        </h3>
+        <button onclick="toggleQRScannerModal(false)" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-4 space-y-3 text-center">
+        <!-- Reader Container -->
+        <div id="qr-reader" class="w-full overflow-hidden rounded-xl border-2 border-dashed border-emerald-500 min-h-[250px] bg-slate-950 flex items-center justify-center text-white text-xs">
+          Đang khởi tạo camera...
+        </div>
+        <p class="text-xs text-slate-500">Hướng camera về phía mã QR dán trên thiết bị PCCC</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: WEBCAM SNAPSHOT FOR DESKTOP ================= -->
+  <div id="modal-webcam" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+          <i class="fas fa-video text-emerald-400"></i> Chụp Ảnh Bằng WebCam
+        </h3>
+        <button onclick="closeWebcamModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-4 text-center space-y-3">
+        <video id="webcam-video" autoplay playsinline class="w-full h-56 bg-black rounded-xl object-cover"></video>
+        <canvas id="webcam-canvas" class="hidden"></canvas>
+        <div class="flex justify-center gap-2">
+          <button onclick="takeWebcamSnapshot()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow flex items-center gap-2">
+            <i class="fas fa-camera"></i> Chụp Ảnh Ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+      EHS Department &copy; 2026 <b>EHS BOYD by EATON</b> • Fire Equipment Inspection Platform
+    </div>
+  </footer>
+
+  <!-- ================= JAVASCRIPT APPLICATION CORE (SUPABASE CLOUD INTEGRATED) ================= -->
+  <script>
+    /* ============================================================================
+       CẤU HÌNH KẾT NỐI SUPABASE (BẠN CHỈ CẦN DÁN 2 DÒNG MÃ CỦA BẠN VÀO ĐÂY)
+       ============================================================================ */
+    const SUPABASE_URL = "https://xmitwgsxbhkmfnrdbdph.supabase.co/rest/v1/";
+    const SUPABASE_ANON_KEY = "sb_publishable_LnLd1VBwT1PLc6Kax3TUOw_q_OAxFJ2";
+
+    /* ========================================================
+       KHỞI TẠO SUPABASE & BIẾN HỆ THỐNG
+       ======================================================== */
+    let supabaseClient = null;
+    let isSupabaseReady = false;
+
+    try {
+      if (
+        SUPABASE_URL &&
+        !SUPABASE_URL.includes("DAN_PROJECT_URL") &&
+        SUPABASE_ANON_KEY &&
+        !SUPABASE_ANON_KEY.includes("DAN_ANON_PUBLIC_KEY") &&
+        typeof supabase !== "undefined"
+      ) {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        isSupabaseReady = true;
+      }
+    } catch (err) {
+      console.error("Lỗi khởi tạo Supabase:", err);
+      isSupabaseReady = false;
+    }
+
+    function updateCloudSyncBadge(status, text) {
+      const badge = document.getElementById("cloud-sync-badge");
+      if (!badge) return;
+      if (status === "connected") {
+        badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${text || "Supabase Cloud Online"}`;
+      } else if (status === "error") {
+        badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-[10px] font-bold text-rose-700";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ${text || "Lỗi kết nối Supabase"}`;
+      } else {
+        badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> ${text || "Chưa gắn mã Supabase (Chạy tạm Local)"}`;
+      }
+    }
+
+    /* ========================================================
+       DATA STORAGE & INITIAL SEED DATA
+       ======================================================== */
+    const STORAGE_KEY_DEVICES = 'EHS_BOYD_DEVICES_V2';
+    const STORAGE_KEY_CHECKERS = 'EHS_BOYD_CHECKERS_V2';
+    const STORAGE_KEY_INSPECTIONS = 'EHS_BOYD_INSPECTIONS_V2';
+    const STORAGE_KEY_OWNER_AUTH = 'EHS_BOYD_OWNER_AUTH_V2';
+
+    const DEFAULT_OWNER_AUTH = { username: 'admin', password: 'admin' };
+
+    const DEFAULT_CHECKERS = [
+      { id: 'chk_1', name: 'Checker 1', pass: '123456' },
+      { id: 'chk_2', name: 'Checker 2', pass: '123456' },
+      { id: 'chk_3', name: 'Checker 3', pass: '123456' }
+    ];
+
+    const DEFAULT_DEVICES = [
+      { type: 'Bình khí CO2', code: 'CO2-MGH-2F-D/01-0005', workshop: 'Xưởng 1', location: 'Cột D1 Tầng 2 Xưởng 1', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Bình bột ABC', code: 'ABC-AGM-GF2-D/03-0004', workshop: 'Xưởng 2', location: 'Cột D3 Xưởng 2 AGM', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Bình bột ABC', code: 'ABC-AGM-GF2-D/03-0005', workshop: 'Xưởng 2', location: 'Cửa thoát hiểm 3 Xưởng 2', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Bình bột ABC', code: 'ABC-EXT-001', workshop: 'Xưởng 3', location: 'Khu vực đóng gói Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Bình khí CO2', code: 'CO2-EXT-002', workshop: 'Xưởng 3', location: 'Tủ điện tổng Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Họng chữa cháy', code: 'FC-WS1-Z1-01', workshop: 'Xưởng 1', location: 'Họng vách tường sảnh chính X1', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Họng chữa cháy', code: 'FC-WS2-Z2-02', workshop: 'Xưởng 2', location: 'Cạnh kho nguyên liệu X2', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Chuông/ đèn/ còi báo cháy', code: 'FAB-WS1-01', workshop: 'Xưởng 1', location: 'Tường đông Xưởng 1', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Chuông/ đèn/ còi báo cháy', code: 'FAB-WS3-03', workshop: 'Xưởng 3', location: 'Cửa xuất hàng Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Tủ báo cháy', code: 'FACP-CENTRAL-01', workshop: 'Xưởng 1', location: 'Phòng an ninh trung tâm', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Quạt hút khói', code: 'EF-ROOF-WS2-01', workshop: 'Xưởng 2', location: 'Mái Xưởng 2 khu vực hàn', history: 'Khởi tạo hệ thống (10/01/2026)' },
+      { type: 'Quạt hút khói', code: 'SF-WS1-AIR-02', workshop: 'Xưởng 1', location: 'Phòng kỹ thuật thông gió X1', history: 'Khởi tạo hệ thống (10/01/2026)' }
+    ];
+
+    const DEFAULT_INSPECTIONS = [
+      {
+        id: 'INS-001',
+        deviceCode: 'ABC-AGM-GF2-D/03-0004',
+        deviceType: 'Bình bột ABC',
+        workshop: 'Xưởng 2',
+        checkerName: 'Checker 1',
+        timestamp: '2026-10-24 14:53',
+        month: 10,
+        year: 2026,
+        status: 'OK',
+        photo: 'https://placehold.co/400x400/059669/ffffff?text=ABC+OK+Verified',
+        checklist: { '1. Vị trí đặt bình thông thoáng': 'OK', '2. Kim áp kế chỉ vạch XANH': 'OK', '3. Chốt niêm chì nguyên vẹn': 'OK' },
+        notes: 'Áp suất chuẩn vạch xanh, niêm chì nguyên vẹn.'
+      },
+      {
+        id: 'INS-002',
+        deviceCode: 'CO2-MGH-2F-D/01-0005',
+        deviceType: 'Bình khí CO2',
+        workshop: 'Xưởng 1',
+        checkerName: 'Checker 1',
+        timestamp: '2026-10-24 07:18',
+        month: 10,
+        year: 2026,
+        status: 'NG',
+        photo: 'https://placehold.co/400x400/dc2626/ffffff?text=CO2+NG+Weight',
+        checklist: { '1. Vị trí râm mát': 'OK', '2. Cân nặng khí CO2': 'NG', '3. Loa cách nhiệt': 'OK' },
+        notes: 'Cân bình hao hụt khí quá mức cho phép, cần nạp lại khí CO2 khẩn cấp.'
+      },
+      {
+        id: 'INS-003',
+        deviceCode: 'FC-WS1-Z1-01',
+        deviceType: 'Họng chữa cháy',
+        workshop: 'Xưởng 1',
+        checkerName: 'Checker 2',
+        timestamp: '2026-10-23 09:15',
+        month: 10,
+        year: 2026,
+        status: 'OK',
+        photo: 'https://placehold.co/400x400/059669/ffffff?text=Fire+Cabinet+OK',
+        checklist: { '1. Cuộn vòi & khớp nối': 'OK', '2. Van góc mở êm': 'OK' },
+        notes: 'Cuộn vòi khô ráo, van nhẹ.'
+      }
+    ];
+
+    let state = {
+      currentUser: null,
+      ownerAuth: DEFAULT_OWNER_AUTH,
+      devices: [],
+      checkers: [],
+      inspections: [],
+      currentCheckDevice: null,
+      capturedPhotoDataUrl: null,
+      html5QrCodeScanner: null,
+      webcamStream: null,
+      activeScannerTarget: 'checker',
+      checkerActiveMonth: new Date().getMonth() + 1,
+      checkerActiveYear: new Date().getFullYear()
+    };
+
+    /* ========================================================
+       APP INITIALIZATION & SUPABASE CLOUD SYNC
+       ======================================================== */
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadDataFromLocalStorage();
+      populateMonthYearFilters();
+      renderCheckerSelectDropdown();
+      renderCheckerAccountList();
+      navigateHome();
+
+      if (isSupabaseReady) {
+        await initSupabaseCloudSync();
+      } else {
+        updateCloudSyncBadge("offline", "Chưa dán mã Supabase (Chạy tạm Local)");
+      }
+    });
+
+    function loadDataFromLocalStorage() {
+      const devStr = localStorage.getItem(STORAGE_KEY_DEVICES);
+      state.devices = devStr ? JSON.parse(devStr) : [...DEFAULT_DEVICES];
+
+      const chkStr = localStorage.getItem(STORAGE_KEY_CHECKERS);
+      state.checkers = chkStr ? JSON.parse(chkStr) : [...DEFAULT_CHECKERS];
+
+      const insStr = localStorage.getItem(STORAGE_KEY_INSPECTIONS);
+      state.inspections = insStr ? JSON.parse(insStr) : [...DEFAULT_INSPECTIONS];
+
+      const authStr = localStorage.getItem(STORAGE_KEY_OWNER_AUTH);
+      state.ownerAuth = authStr ? JSON.parse(authStr) : { ...DEFAULT_OWNER_AUTH };
+    }
+
+    function saveLocalBackup() {
+      try {
+        localStorage.setItem(STORAGE_KEY_DEVICES, JSON.stringify(state.devices));
+        localStorage.setItem(STORAGE_KEY_CHECKERS, JSON.stringify(state.checkers));
+        localStorage.setItem(STORAGE_KEY_OWNER_AUTH, JSON.stringify(state.ownerAuth));
+        const lightInspections = state.inspections.slice(0, 50).map(i => ({
+          ...i,
+          photo: i.photo && i.photo.startsWith('data:image') ? '' : i.photo
+        }));
+        localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(lightInspections));
+      } catch (e) {
+        console.warn("Local backup skipped:", e);
+      }
+    }
+
+    function mapInspectionFromDB(row) {
+      return {
+        id: row.id,
+        deviceCode: row.device_code,
+        deviceType: row.device_type,
+        workshop: row.workshop,
+        checkerName: row.checker_name,
+        timestamp: row.timestamp,
+        month: row.month,
+        year: row.year,
+        status: row.status,
+        photo: row.photo || '',
+        checklist: row.checklist || {},
+        notes: row.notes || ''
+      };
+    }
+
+    function mapInspectionToDB(ins) {
+      return {
+        id: ins.id,
+        device_code: ins.deviceCode,
+        device_type: ins.deviceType,
+        workshop: ins.workshop,
+        checker_name: ins.checkerName,
+        timestamp: ins.timestamp,
+        month: ins.month,
+        year: ins.year,
+        status: ins.status,
+        photo: ins.photo || '',
+        checklist: ins.checklist || {},
+        notes: ins.notes || ''
+      };
+    }
+
+    async function fetchAllSupabaseData() {
+      if (!isSupabaseReady || !supabaseClient) return;
+
+      const { data: settingsData, error: setErr } = await supabaseClient
+        .from('pccc_settings')
+        .select('*')
+        .eq('key', 'owner_auth')
+        .maybeSingle();
+
+      if (setErr) throw setErr;
+      if (settingsData && settingsData.value) {
+        state.ownerAuth = settingsData.value;
+      }
+
+      const { data: devicesData, error: devErr } = await supabaseClient
+        .from('pccc_devices')
+        .select('*');
+      if (devErr) throw devErr;
+
+      if (!devicesData || devicesData.length === 0) {
+        await supabaseClient.from('pccc_devices').insert(DEFAULT_DEVICES);
+        await supabaseClient.from('pccc_checkers').upsert(DEFAULT_CHECKERS);
+        await supabaseClient.from('pccc_settings').upsert({
+          key: 'owner_auth',
+          value: DEFAULT_OWNER_AUTH
+        });
+        state.devices = [...DEFAULT_DEVICES];
+        state.checkers = [...DEFAULT_CHECKERS];
+      } else {
+        state.devices = devicesData;
+      }
+
+      const { data: checkersData, error: chkErr } = await supabaseClient
+        .from('pccc_checkers')
+        .select('*');
+      if (!chkErr && checkersData && checkersData.length > 0) {
+        state.checkers = checkersData;
+      }
+
+      const { data: insData, error: insErr } = await supabaseClient
+        .from('pccc_inspections')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (!insErr && insData) {
+        state.inspections = insData.map(mapInspectionFromDB);
+      }
+
+      saveLocalBackup();
+      renderCheckerSelectDropdown();
+      renderCheckerAccountList();
+      refreshActiveViews();
+    }
+
+    async function initSupabaseCloudSync() {
+      try {
+        updateCloudSyncBadge("connected", "Đang đồng bộ Supabase...");
+        await fetchAllSupabaseData();
+        updateCloudSyncBadge("connected", "Supabase Cloud Online");
+
+        supabaseClient
+          .channel('pccc-realtime-channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_devices' }, () => {
+            fetchAllSupabaseData();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_checkers' }, () => {
+            fetchAllSupabaseData();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_inspections' }, () => {
+            fetchAllSupabaseData();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_settings' }, () => {
+            fetchAllSupabaseData();
+          })
+          .subscribe();
+
+      } catch (err) {
+        console.error("Supabase Sync Error:", err);
+        updateCloudSyncBadge("error", "Lỗi kết nối Supabase");
+        showToast("Không thể kết nối Supabase. Hãy kiểm tra URL, Key và SQL tạo bảng!", true);
+      }
+    }
+
+    function refreshActiveViews() {
+      if (!state.currentUser) return;
+      if (state.currentUser.role === 'OWNER') {
+        renderOwnerDeviceTable();
+        renderOwnerQRTable();
+        refreshReportDashboard();
+      } else if (state.currentUser.role === 'CHECKER') {
+        renderCheckerPendingDevices();
+      } else if (state.currentUser.role === 'GUEST') {
+        refreshGuestDashboard();
+      }
+    }
+
+    /* Supabase Cloud CRUD Helpers */
+    async function cloudSaveDevice(devObj) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_devices').upsert(devObj);
+        if (error) throw error;
+      }
+    }
+
+    async function cloudDeleteDevice(code) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_devices').delete().eq('code', code);
+        if (error) throw error;
+      }
+    }
+
+    async function cloudSaveChecker(chkObj) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_checkers').upsert(chkObj);
+        if (error) throw error;
+      }
+    }
+
+    async function cloudDeleteChecker(chkId) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_checkers').delete().eq('id', chkId);
+        if (error) throw error;
+      }
+    }
+
+    async function cloudSaveOwnerAuth(authObj) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_settings').upsert({
+          key: 'owner_auth',
+          value: authObj
+        });
+        if (error) throw error;
+      }
+    }
+
+    function dataURLtoBlob(dataUrl) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
+    async function uploadPhotoToSupabaseStorage(dataUrl, deviceCode, inspectionId) {
+      if (!isSupabaseReady || !supabaseClient) {
+        return dataUrl;
+      }
+      const safeCode = deviceCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filePath = `${safeCode}/${inspectionId}.jpg`;
+      const blob = dataURLtoBlob(dataUrl);
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from('pccc-photos')
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabaseClient.storage
+        .from('pccc-photos')
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    }
+
+    async function cloudSaveInspection(insObj) {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient
+          .from('pccc_inspections')
+          .upsert(mapInspectionToDB(insObj));
+        if (error) throw error;
+      }
+    }
+
+    function populateMonthYearFilters() {
+      const mSelect = document.getElementById('report-filter-month');
+      const ySelect = document.getElementById('report-filter-year');
+      const gmSelect = document.getElementById('guest-filter-month');
+      const gySelect = document.getElementById('guest-filter-year');
+      const cmSelect = document.getElementById('cycle-select-month');
+      const cySelect = document.getElementById('cycle-select-year');
+
+      const curDate = new Date();
+      const curMonth = curDate.getMonth() + 1;
+      const curYear = curDate.getFullYear();
+
+      const populate = (mEl, yEl) => {
+        if (!mEl || !yEl) return;
+        mEl.innerHTML = '';
+        for (let m = 1; m <= 12; m++) {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = `Tháng ${m}`;
+          if (m === curMonth) opt.selected = true;
+          mEl.appendChild(opt);
+        }
+        yEl.innerHTML = '';
+        for (let y = curYear - 2; y <= curYear + 1; y++) {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = `Năm ${y}`;
+          if (y === curYear) opt.selected = true;
+          yEl.appendChild(opt);
+        }
+      };
+
+      populate(mSelect, ySelect);
+      populate(gmSelect, gySelect);
+      populate(cmSelect, cySelect);
+    }
+
+    /* ========================================================
+       NAVIGATION & AUTHENTICATION
+       ======================================================== */
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-msg');
+      if (!toast || !msgEl) return;
+      msgEl.textContent = msg;
+      toast.className = `fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transition-all transform duration-300 ${isError ? 'bg-rose-600' : 'bg-emerald-600'}`;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    function handleLoginOwner() {
+      const u = document.getElementById('login-owner-user').value.trim();
+      const p = document.getElementById('login-owner-pass').value.trim();
+      if (u === state.ownerAuth.username && p === state.ownerAuth.password) {
+        state.currentUser = { role: 'OWNER', name: 'Quản Trị Viên (OWNER)' };
+        showToast('Đăng nhập OWNER thành công!');
+        renderAppByRole();
+      } else {
+        showToast('Tài khoản hoặc mật khẩu OWNER không chính xác!', true);
+      }
+    }
+
+    function openChangePasswordModal() {
+      document.getElementById('owner-old-pass').value = '';
+      document.getElementById('owner-new-pass').value = '';
+      document.getElementById('owner-confirm-pass').value = '';
+      const modal = document.getElementById('modal-change-password');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeChangePasswordModal() {
+      const modal = document.getElementById('modal-change-password');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function submitChangeOwnerPassword() {
+      const oldP = document.getElementById('owner-old-pass').value.trim();
+      const newP = document.getElementById('owner-new-pass').value.trim();
+      const confP = document.getElementById('owner-confirm-pass').value.trim();
+
+      if (!oldP || !newP || !confP) {
+        showToast('Vui lòng nhập đầy đủ các trường thông tin!', true);
+        return;
+      }
+      if (oldP !== state.ownerAuth.password) {
+        showToast('Mật khẩu hiện tại không đúng!', true);
+        return;
+      }
+      if (newP !== confP) {
+        showToast('Mật khẩu xác nhận không khớp với mật khẩu mới!', true);
+        return;
+      }
+      if (newP.length < 4) {
+        showToast('Mật khẩu mới phải có ít nhất 4 ký tự!', true);
+        return;
+      }
+
+      try {
+        state.ownerAuth.password = newP;
+        await cloudSaveOwnerAuth(state.ownerAuth);
+        closeChangePasswordModal();
+        showToast('Đổi mật khẩu OWNER thành công và đã lưu lên Supabase!');
+      } catch (err) {
+        showToast('Lỗi lưu mật khẩu: ' + err.message, true);
+      }
+    }
+
+    function renderCheckerSelectDropdown() {
+      const select = document.getElementById('login-checker-select');
+      if (!select) return;
+      const prevVal = select.value;
+      select.innerHTML = '<option value="">-- Chọn tài khoản Checker --</option>';
+      state.checkers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        if (c.id === prevVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderCheckerAccountList() {
+      const container = document.getElementById('owner-checker-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (state.checkers.length === 0) {
+        container.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Chưa có tài khoản Checker nào.</div>`;
+        return;
+      }
+
+      state.checkers.forEach(chk => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="font-bold text-slate-800">${chk.name}</span>
+            <span class="font-mono text-slate-400 text-[11px]">(Mật khẩu: ${chk.pass})</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="changeCheckerPassword('${chk.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-[11px] px-2 py-1 rounded hover:bg-indigo-50" title="Đổi mật khẩu">
+              <i class="fas fa-key"></i> Đổi pass
+            </button>
+            <button onclick="deleteCheckerAccount('${chk.id}')" class="text-rose-500 hover:text-rose-700 font-semibold text-[11px] px-2 py-1 rounded hover:bg-rose-50" title="Xóa Checker">
+              <i class="fas fa-trash-alt"></i> Xóa
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    async function addNewChecker() {
+      const name = prompt('Nhập tên tài khoản Checker mới (ví dụ: Checker 4):');
+      if (!name || !name.trim()) return;
+      const pass = prompt('Nhập mật khẩu cho Checker này:', '123456');
+      if (!pass || !pass.trim()) return;
+
+      try {
+        const newChecker = {
+          id: 'chk_' + Date.now().toString().slice(-5),
+          name: name.trim(),
+          pass: pass.trim()
+        };
+        state.checkers.push(newChecker);
+        await cloudSaveChecker(newChecker);
+        renderCheckerSelectDropdown();
+        renderCheckerAccountList();
+        showToast(`Đã thêm mới Checker: ${name}`);
+      } catch (err) {
+        showToast('Lỗi thêm Checker: ' + err.message, true);
+      }
+    }
+
+    async function changeCheckerPassword(chkId) {
+      const chk = state.checkers.find(c => c.id === chkId);
+      if (!chk) return;
+      const newPass = prompt(`Nhập mật khẩu mới cho ${chk.name}:`, chk.pass);
+      if (!newPass || !newPass.trim()) return;
+
+      try {
+        chk.pass = newPass.trim();
+        await cloudSaveChecker(chk);
+        renderCheckerAccountList();
+        showToast(`Đã cập nhật mật khẩu cho ${chk.name}`);
+      } catch (err) {
+        showToast('Lỗi đổi mật khẩu: ' + err.message, true);
+      }
+    }
+
+    async function deleteCheckerAccount(chkId) {
+      const chk = state.checkers.find(c => c.id === chkId);
+      if (!chk) return;
+      if (confirm(`Bạn có chắc muốn xóa tài khoản ${chk.name}?`)) {
+        try {
+          state.checkers = state.checkers.filter(c => c.id !== chkId);
+          await cloudDeleteChecker(chkId);
+          renderCheckerSelectDropdown();
+          renderCheckerAccountList();
+          showToast(`Đã xóa tài khoản ${chk.name}`);
+        } catch (err) {
+          showToast('Lỗi xóa Checker: ' + err.message, true);
+        }
+      }
+    }
+
+    function handleLoginChecker() {
+      const select = document.getElementById('login-checker-select');
+      const passInput = document.getElementById('login-checker-pass');
+      const chkId = select ? select.value : '';
+      const pass = passInput ? passInput.value.trim() : '';
+
+      if (!chkId) {
+        showToast('Vui lòng chọn tài khoản Checker!', true);
+        return;
+      }
+      const targetChecker = state.checkers.find(c => c.id === chkId);
+      if (targetChecker && targetChecker.pass === pass) {
+        state.currentUser = { role: 'CHECKER', name: targetChecker.name, id: targetChecker.id };
+        showToast(`Đăng nhập thành công: ${targetChecker.name}`);
+        renderAppByRole();
+        openCheckerCycleModal();
+      } else {
+        showToast('Mật khẩu Checker không chính xác!', true);
+      }
+    }
+
+    function openCheckerCycleModal() {
+      const modal = document.getElementById('modal-checker-cycle');
+      if (!modal) return;
+      const cmSelect = document.getElementById('cycle-select-month');
+      const cySelect = document.getElementById('cycle-select-year');
+      if (cmSelect) cmSelect.value = state.checkerActiveMonth;
+      if (cySelect) cySelect.value = state.checkerActiveYear;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function confirmCheckerCycle() {
+      const cmSelect = document.getElementById('cycle-select-month');
+      const cySelect = document.getElementById('cycle-select-year');
+      if (cmSelect && cySelect) {
+        state.checkerActiveMonth = parseInt(cmSelect.value);
+        state.checkerActiveYear = parseInt(cySelect.value);
+      }
+      const badge = document.getElementById('checker-current-cycle-badge');
+      if (badge) {
+        badge.textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
+      }
+      const modal = document.getElementById('modal-checker-cycle');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      renderCheckerPendingDevices();
+      showToast(`Đã chọn chu kỳ kiểm tra: Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`);
+    }
+
+    function handleLoginGuest() {
+      state.currentUser = { role: 'GUEST', name: 'Auditor / Khách (GUEST)' };
+      showToast('Đang truy cập với quyền AUDITOR...');
+      renderAppByRole();
+    }
+
+    function navigateHome() {
+      state.currentUser = null;
+      hideAllSections();
+      const loginSection = document.getElementById('section-login');
+      if (loginSection) loginSection.classList.remove('hidden');
+      updateNavUserBadge();
+    }
+
+    function logout() {
+      navigateHome();
+      showToast('Đã đăng xuất khỏi phiên làm việc.');
+    }
+
+    function hideAllSections() {
+      const ids = ['section-login', 'section-owner', 'section-checker', 'section-guest'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
+    function switchLoginTab(tab) {
+      const tabOwner = document.getElementById('tab-btn-owner');
+      const tabChecker = document.getElementById('tab-btn-checker');
+      const formOwner = document.getElementById('form-login-owner');
+      const formChecker = document.getElementById('form-login-checker');
+
+      if (!tabOwner || !tabChecker || !formOwner || !formChecker) return;
+
+      if (tab === 'owner') {
+        tabOwner.className = 'flex-1 py-2 rounded-lg font-bold text-xs bg-white text-slate-800 shadow-sm';
+        tabChecker.className = 'flex-1 py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800';
+        formOwner.classList.remove('hidden');
+        formChecker.classList.add('hidden');
+      } else {
+        tabChecker.className = 'flex-1 py-2 rounded-lg font-bold text-xs bg-white text-slate-800 shadow-sm';
+        tabOwner.className = 'flex-1 py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800';
+        formChecker.classList.remove('hidden');
+        formOwner.classList.add('hidden');
+      }
+    }
+
+    function renderAppByRole() {
+      hideAllSections();
+      updateNavUserBadge();
+
+      if (!state.currentUser) {
+        navigateHome();
+        return;
+      }
+
+      if (state.currentUser.role === 'OWNER') {
+        const el = document.getElementById('section-owner');
+        if (el) el.classList.remove('hidden');
+        switchOwnerSubTab('devices');
+        renderOwnerDeviceTable();
+        renderOwnerQRTable();
+        refreshReportDashboard();
+        renderCheckerAccountList();
+      } else if (state.currentUser.role === 'CHECKER') {
+        const el = document.getElementById('section-checker');
+        if (el) el.classList.remove('hidden');
+        const badge = document.getElementById('checker-current-cycle-badge');
+        if (badge) badge.textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
+        renderCheckerPendingDevices();
+        const card = document.getElementById('checksheet-form-card');
+        if (card) card.classList.add('hidden');
+      } else if (state.currentUser.role === 'GUEST') {
+        const el = document.getElementById('section-guest');
+        if (el) el.classList.remove('hidden');
+        refreshGuestDashboard();
+      }
+    }
+
+    function updateNavUserBadge() {
+      const badgeContainer = document.getElementById('nav-user-badge');
+      if (!badgeContainer) return;
+      if (!state.currentUser) {
+        badgeContainer.innerHTML = '';
+        return;
+      }
+      badgeContainer.innerHTML = `
+        <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+          <span class="w-2 h-2 rounded-full ${state.currentUser.role === 'OWNER' ? 'bg-indigo-500' : state.currentUser.role === 'CHECKER' ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+          <span class="text-xs font-bold text-slate-700">${state.currentUser.name}</span>
+          <button onclick="logout()" class="ml-2 text-rose-500 hover:text-rose-700 text-xs font-bold" title="Đăng xuất">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      `;
+    }
+
+    /* ========================================================
+       OWNER SUBSYSTEM
+       ======================================================== */
+    let ownerEditingDeviceCode = null;
+
+    function switchOwnerSubTab(tabName) {
+      const tabs = ['devices', 'qr', 'reports', 'accounts'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`owner-subtab-${t}`);
+        const content = document.getElementById(`owner-view-${t}`);
+        if (btn && content) {
+          if (t === tabName) {
+            btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-sm';
+            content.classList.remove('hidden');
+          } else {
+            btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100';
+            content.classList.add('hidden');
+          }
+        }
+      });
+
+      if (tabName === 'reports') {
+        refreshReportDashboard();
+      }
+    }
+
+    function getDeviceTypeBadgeClass(type) {
+      if (type === 'Bình bột ABC') return 'bg-amber-100 text-amber-800 border border-amber-200';
+      if (type === 'Bình khí CO2') return 'bg-sky-100 text-sky-800 border border-sky-200';
+      if (type === 'Họng chữa cháy') return 'bg-rose-100 text-rose-800 border border-rose-200';
+      if (type === 'Chuông/ đèn/ còi báo cháy' || type === 'Chuông đèn còi báo cháy') return 'bg-orange-100 text-orange-800 border border-orange-200';
+      if (type === 'Tủ báo cháy') return 'bg-purple-100 text-purple-800 border border-purple-200';
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+    }
+
+    function renderOwnerDeviceTable() {
+      const tbody = document.getElementById('owner-device-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const filterType = document.getElementById('owner-filter-type') ? document.getElementById('owner-filter-type').value : '';
+      const filterWorkshop = document.getElementById('owner-filter-workshop') ? document.getElementById('owner-filter-workshop').value : '';
+      const searchKey = document.getElementById('owner-search-code') ? document.getElementById('owner-search-code').value.trim().toLowerCase() : '';
+
+      let filtered = state.devices.filter(d => {
+        const matchType = !filterType || d.type === filterType;
+        const matchWorkshop = !filterWorkshop || d.workshop === filterWorkshop;
+        const matchSearch = !searchKey || d.code.toLowerCase().includes(searchKey) || d.location.toLowerCase().includes(searchKey);
+        return matchType && matchWorkshop && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">Không tìm thấy thiết bị nào phù hợp.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(dev => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 text-xs';
+        tr.innerHTML = `
+          <td class="py-3 px-3">
+            <span class="px-2 py-1 rounded-md text-[11px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">
+              ${dev.type}
+            </span>
+          </td>
+          <td class="py-3 px-3 font-mono font-bold text-slate-800">${dev.code}</td>
+          <td class="py-3 px-3 font-semibold text-slate-700">${dev.workshop}</td>
+          <td class="py-3 px-3 text-slate-600">${dev.location}</td>
+          <td class="py-3 px-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="openEditDeviceModal('${dev.code}')" class="text-indigo-600 hover:text-indigo-800 font-bold p-1" title="Chỉnh sửa">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deleteDevice('${dev.code}')" class="text-rose-500 hover:text-rose-700 font-bold p-1" title="Xóa thiết bị">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </td>
+          <td class="py-3 px-3 text-[11px] text-slate-500">${dev.history || 'Đã tạo'}</td>
+          <td class="py-3 px-3 text-center">
+            <button onclick="openDeviceHistoryModal('${dev.code}')" class="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors inline-flex items-center justify-center" title="Xem lịch sử checksheet">
+              <i class="fas fa-eye text-sm"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openDeviceHistoryModal(code) {
+      const dev = state.devices.find(d => d.code === code);
+      if (!dev) return;
+
+      const devInfoEl = document.getElementById('history-modal-device-info');
+      const listEl = document.getElementById('history-modal-inspections-list');
+      if (!devInfoEl || !listEl) return;
+
+      devInfoEl.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${dev.type}</span>
+          <span class="font-mono font-bold text-slate-800">${dev.code}</span>
+        </div>
+        <div class="text-[11px] text-slate-600 mt-1.5">${dev.workshop} • ${dev.location}</div>
+      `;
+
+      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
+
+      if (devInspections.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">
+            Chưa có lịch sử kiểm tra định kỳ cho thiết bị này.
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = devInspections.map(ins => `
+          <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'} flex gap-3 text-xs">
+            ${ins.photo ? `<a href="${ins.photo}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${ins.photo}" class="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1.5">
+                  <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Kết quả: ${ins.status}
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">${ins.timestamp}</span>
+              </div>
+              <div class="text-slate-600">Người kiểm tra: <b>${ins.checkerName}</b></div>
+              ${ins.notes ? `<div class="text-slate-700 bg-white/80 p-2 rounded border border-slate-200/60 text-[11px]"><b>Ghi chú:</b> ${ins.notes}</div>` : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const modal = document.getElementById('modal-device-history');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeviceHistoryModal() {
+      const modal = document.getElementById('modal-device-history');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function openAddDeviceModal() {
+      ownerEditingDeviceCode = null;
+      document.getElementById('modal-device-title').textContent = 'Thêm Thiết Bị PCCC Mới';
+      document.getElementById('form-device-type').value = 'Bình bột ABC';
+      document.getElementById('form-device-code').value = '';
+      document.getElementById('form-device-code').disabled = false;
+      document.getElementById('form-device-workshop').value = 'Xưởng 1';
+      document.getElementById('form-device-location').value = '';
+      
+      const modal = document.getElementById('modal-device-form');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function openEditDeviceModal(code) {
+      const dev = state.devices.find(d => d.code === code);
+      if (!dev) return;
+      ownerEditingDeviceCode = code;
+      document.getElementById('modal-device-title').textContent = 'Chỉnh Sửa Thiết Bị';
+      document.getElementById('form-device-type').value = dev.type;
+      document.getElementById('form-device-code').value = dev.code;
+      document.getElementById('form-device-code').disabled = true;
+      document.getElementById('form-device-workshop').value = dev.workshop;
+      document.getElementById('form-device-location').value = dev.location;
+
+      const modal = document.getElementById('modal-device-form');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeviceModal() {
+      const modal = document.getElementById('modal-device-form');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      ownerEditingDeviceCode = null;
+    }
+
+    async function saveDeviceModalData() {
+      const type = document.getElementById('form-device-type').value;
+      const code = document.getElementById('form-device-code').value.trim();
+      const workshop = document.getElementById('form-device-workshop').value;
+      const location = document.getElementById('form-device-location').value.trim();
+
+      if (!code || !location) {
+        showToast('Vui lòng điền đầy đủ mã và vị trí thiết bị!', true);
+        return;
+      }
+
+      const dateStr = new Date().toLocaleDateString('vi-VN');
+
+      try {
+        if (ownerEditingDeviceCode) {
+          const idx = state.devices.findIndex(d => d.code === ownerEditingDeviceCode);
+          if (idx !== -1) {
+            state.devices[idx].type = type;
+            state.devices[idx].workshop = workshop;
+            state.devices[idx].location = location;
+            state.devices[idx].history = `Cập nhật bởi OWNER (${dateStr})`;
+            await cloudSaveDevice(state.devices[idx]);
+            showToast('Đã lưu thay đổi thiết bị lên Supabase!');
+          }
+        } else {
+          const exists = state.devices.some(d => d.code.toLowerCase() === code.toLowerCase());
+          if (exists) {
+            showToast('Mã thiết bị này đã tồn tại trong hệ thống!', true);
+            return;
+          }
+          const newDev = {
+            type,
+            code,
+            workshop,
+            location,
+            history: `Tạo mới bởi OWNER (${dateStr})`
+          };
+          state.devices.push(newDev);
+          await cloudSaveDevice(newDev);
+          showToast('Thêm mới thiết bị thành công!');
+        }
+
+        closeDeviceModal();
+        renderOwnerDeviceTable();
+        renderOwnerQRTable();
+        refreshReportDashboard();
+      } catch (err) {
+        showToast('Lỗi lưu thiết bị: ' + err.message, true);
+      }
+    }
+
+    async function deleteDevice(code) {
+      if (confirm(`Bạn có chắc muốn xóa thiết bị ${code}?`)) {
+        try {
+          state.devices = state.devices.filter(d => d.code !== code);
+          await cloudDeleteDevice(code);
+          renderOwnerDeviceTable();
+          renderOwnerQRTable();
+          refreshReportDashboard();
+          showToast(`Đã xóa thiết bị ${code}`);
+        } catch (err) {
+          showToast('Lỗi xóa thiết bị: ' + err.message, true);
+        }
+      }
+    }
+
+    function renderOwnerQRTable() {
+      const container = document.getElementById('owner-qr-cards-grid');
+      const countEl = document.getElementById('owner-qr-total-count');
+      if (countEl) countEl.textContent = state.devices.length;
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.devices.forEach(dev => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-3.5 rounded-2xl border border-slate-200/90 flex items-center justify-between gap-3 shadow-sm hover:shadow transition-all';
+        const qrId = 'qr_tag_' + dev.code.replace(/[^a-zA-Z0-9]/g, '_');
+        card.innerHTML = `
+          <div class="space-y-1 flex-1 min-w-0 pr-1">
+            <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-sky-100 text-sky-700 border border-sky-200/60 leading-tight">
+              ${dev.type}
+            </span>
+            <div class="font-mono font-black text-slate-900 text-xs sm:text-[13px] leading-tight truncate mt-1">
+              ${dev.code}
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium truncate">
+              ${dev.workshop} • ${dev.location}
+            </div>
+          </div>
+          <div id="${qrId}" class="w-16 h-16 shrink-0 bg-white p-1 rounded-xl border border-slate-300 flex items-center justify-center"></div>
+        `;
+        container.appendChild(card);
+
+        setTimeout(() => {
+          const el = document.getElementById(qrId);
+          if (el && typeof QRCode !== 'undefined') {
+            el.innerHTML = '';
+            new QRCode(el, {
+              text: dev.code,
+              width: 58,
+              height: 58,
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          }
+        }, 50);
+      });
+    }
+
+    function generateQRCodeDataUrl(text) {
+      return new Promise((resolve) => {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+        try {
+          new QRCode(tempDiv, {
+            text: text,
+            width: 90,
+            height: 90,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+          setTimeout(() => {
+            const img = tempDiv.querySelector('img');
+            const canvas = tempDiv.querySelector('canvas');
+            let dataUrl = '';
+            if (img && img.src && img.src.startsWith('data:image')) {
+              dataUrl = img.src;
+            } else if (canvas) {
+              dataUrl = canvas.toDataURL('image/png');
+            }
+            document.body.removeChild(tempDiv);
+            resolve(dataUrl);
+          }, 60);
+        } catch (err) {
+          if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+          resolve('');
+        }
+      });
+    }
+
+    async function exportDevicesToExcel() {
+      try {
+        if (state.devices.length === 0) {
+          showToast('Chưa có thiết bị nào để xuất file Excel!', true);
+          return;
+        }
+
+        showToast('Đang tạo mã QR và xuất file Excel, vui lòng đợi giây lát...');
+
+        const qrImages = {};
+        for (const dev of state.devices) {
+          qrImages[dev.code] = await generateQRCodeDataUrl(dev.code);
+        }
+
+        let excelHtml = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8">
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Tem_QR_Thiet_Bi</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                      <x:Print>
+                        <x:ValidPrinterInfo/>
+                        <x:PaperSizeIndex>9</x:PaperSizeIndex>
+                        <x:Scale>100</x:Scale>
+                      </x:Print>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+              .device-tem-cell {
+                border: 1.5pt solid #cbd5e1;
+                background-color: #ffffff;
+                padding: 10px 14px;
+                vertical-align: middle;
+                font-family: Arial, "Segoe UI", sans-serif;
+                height: 100px;
+                min-width: 330px;
+                mso-style-parent: "";
+              }
+              .badge-text {
+                color: #0369a1;
+                font-weight: bold;
+                font-size: 11px;
+                display: inline-block;
+                margin-bottom: 4px;
+              }
+              .code-text {
+                font-size: 13px;
+                font-weight: 900;
+                color: #0f172a;
+                font-family: "Courier New", monospace;
+                margin-bottom: 4px;
+              }
+              .location-text {
+                font-size: 11px;
+                color: #64748b;
+                font-weight: 500;
+              }
+            </style>
+          </head>
+          <body>
+            <table cellspacing="8" cellpadding="0">
+        `;
+
+        for (let i = 0; i < state.devices.length; i += 3) {
+          excelHtml += '<tr>';
+          for (let col = 0; col < 3; col++) {
+            const dev = state.devices[i + col];
+            if (dev) {
+              const qrSrc = qrImages[dev.code] || '';
+              excelHtml += `
+                <td class="device-tem-cell">
+                  <table cellpadding="0" cellspacing="0" style="width:100%; border:none;">
+                    <tr>
+                      <td style="vertical-align:middle; text-align:left; border:none; padding-right:12px;">
+                        <span class="badge-text">${dev.type}</span><br>
+                        <div class="code-text">${dev.code}</div>
+                        <div class="location-text">${dev.workshop} • ${dev.location}</div>
+                      </td>
+                      <td style="vertical-align:middle; text-align:right; border:none; width:80px;">
+                        ${qrSrc ? `<img src="${qrSrc}" width="76" height="76" alt="QR" style="border:1px solid #cbd5e1; border-radius:6px; display:block;" />` : ''}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              `;
+            } else {
+              excelHtml += '<td style="border:none;"></td>';
+            }
+          }
+          excelHtml += '</tr>';
+        }
+
+        excelHtml += '</table></body></html>';
+
+        const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const downloadLink = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+        downloadLink.href = url;
+        downloadLink.download = `EHS_BOYD_EATON_Tem_QR_${dateStr}.xls`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+
+        showToast('Đã xuất file Excel kèm mã QR thành công!');
+      } catch (err) {
+        showToast('Lỗi khi xuất file Excel: ' + err.message, true);
+      }
+    }
+
+    /* ========================================================
+       REPORT & DASHBOARD VIEW (SHARED OWNER & GUEST TOTAL)
+       ======================================================== */
+    function refreshReportDashboard() {
+      const mEl = document.getElementById('report-filter-month');
+      const yEl = document.getElementById('report-filter-year');
+      if (!mEl || !yEl) return;
+      const m = parseInt(mEl.value) || (new Date().getMonth() + 1);
+      const y = parseInt(yEl.value) || new Date().getFullYear();
+      renderDashboardView('report-dashboard-container', m, y);
+    }
+
+    function refreshGuestDashboard() {
+      const mEl = document.getElementById('guest-filter-month');
+      const yEl = document.getElementById('guest-filter-year');
+      if (!mEl || !yEl) return;
+      const m = parseInt(mEl.value) || (new Date().getMonth() + 1);
+      const y = parseInt(yEl.value) || new Date().getFullYear();
+      renderDashboardView('guest-total-dashboard-container', m, y);
+    }
+
+    function renderDashboardView(containerId, targetMonth, targetYear) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const categories = [
+        { type: 'Bình khí CO2', label: 'Bình khí CO2' },
+        { type: 'Bình bột ABC', label: 'Bình bột ABC' },
+        { type: 'Họng chữa cháy', label: 'Họng chữa cháy' },
+        { type: 'Chuông/ đèn/ còi báo cháy', label: 'Chuông/ đèn/ còi báo cháy' },
+        { type: 'Tủ báo cháy', label: 'Tủ báo cháy' },
+        { type: 'Quạt hút khói', label: 'Quạt hút khói' }
+      ];
+
+      const cycleInspections = state.inspections.filter(i => {
+        return parseInt(i.month) === targetMonth && parseInt(i.year) === targetYear;
+      });
+
+      const latestInsMap = {};
+      cycleInspections.forEach(i => {
+        const c = i.deviceCode.toLowerCase();
+        if (!latestInsMap[c] || new Date(i.timestamp) > new Date(latestInsMap[c].timestamp)) {
+          latestInsMap[c] = i;
+        }
+      });
+
+      let totalAll = state.devices.length;
+      let totalOK = 0;
+      let totalNG = 0;
+      let totalNeedCheck = 0;
+
+      const catStats = categories.map(cat => {
+        const catDevices = state.devices.filter(d => {
+          if (cat.type === 'Chuông/ đèn/ còi báo cháy') {
+            return d.type === 'Chuông/ đèn/ còi báo cháy' || d.type === 'Chuông đèn còi báo cháy';
+          }
+          return d.type === cat.type;
+        });
+
+        let okCount = 0;
+        let ngCount = 0;
+        let needCheckCount = 0;
+
+        catDevices.forEach(d => {
+          const ins = latestInsMap[d.code.toLowerCase()];
+          if (!ins) {
+            needCheckCount++;
+          } else if (ins.status === 'OK') {
+            okCount++;
+          } else {
+            ngCount++;
+          }
+        });
+
+        totalOK += okCount;
+        totalNG += ngCount;
+        totalNeedCheck += needCheckCount;
+
+        const totalCat = catDevices.length;
+        const pctOK = totalCat > 0 ? ((okCount / totalCat) * 100).toFixed(0) : 0;
+        const pctNG = totalCat > 0 ? ((ngCount / totalCat) * 100).toFixed(0) : 0;
+        const pctNeed = totalCat > 0 ? (100 - pctOK - pctNG) : 100;
+
+        return {
+          label: cat.label,
+          type: cat.type,
+          total: totalCat,
+          ok: okCount,
+          ng: ngCount,
+          need: needCheckCount,
+          pctOK: Number(pctOK),
+          pctNG: Number(pctNG),
+          pctNeed: Number(pctNeed)
+        };
+      });
+
+      const overallPct = totalAll > 0 ? ((totalOK / totalAll) * 100).toFixed(1) : '0.0';
+
+      const radius = 54;
+      const circ = 2 * Math.PI * radius;
+      const strokeDashoffset = circ - (circ * parseFloat(overallPct)) / 100;
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col items-center justify-center text-center">
+              <div class="relative w-44 h-44 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+                  <circle cx="70" cy="70" r="${radius}" stroke="#e2e8f0" stroke-width="16" fill="transparent"/>
+                  <circle cx="70" cy="70" r="${radius}" stroke="#10b981" stroke-width="16" fill="transparent"
+                    stroke-dasharray="${circ}" stroke-dashoffset="${strokeDashoffset}" stroke-linecap="round" class="transition-all duration-700"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="text-3xl font-black text-slate-900 tracking-tight">${overallPct}%</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hoàn Thành</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-center gap-4 mt-5 text-xs font-bold">
+                <div class="flex items-center gap-1.5 text-emerald-600">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> OK (${totalOK})
+                </div>
+                <div class="flex items-center gap-1.5 text-rose-600">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> NG (${totalNG})
+                </div>
+                <div class="flex items-center gap-1.5 text-amber-500">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Need Check (${totalNeedCheck})
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-8 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-3.5">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-800">Tiến Độ Theo Từng Loại Thiết Bị</h4>
+                <div class="flex items-center gap-3 text-[10px] font-bold">
+                  <span class="text-emerald-600 flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500"></span> Đạt (OK)</span>
+                  <span class="text-rose-600 flex items-center gap-1"><span class="w-2 h-2 rounded bg-rose-500"></span> Lỗi (NG)</span>
+                  <span class="text-amber-500 flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-400"></span> Need Check / Quá hạn</span>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                ${catStats.map(c => `
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="font-bold text-slate-700">${c.label}</span>
+                      <span class="text-slate-400 text-[11px] font-medium">${c.ok}/${c.total} thiết bị (${c.pctOK}%)</span>
+                    </div>
+                    <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                      <div style="width: ${c.pctOK}%" class="bg-emerald-500 h-full transition-all duration-500" title="OK: ${c.ok}"></div>
+                      <div style="width: ${c.pctNG}%" class="bg-rose-500 h-full transition-all duration-500" title="NG: ${c.ng}"></div>
+                      <div style="width: ${c.pctNeed}%" class="bg-amber-300 h-full transition-all duration-500" title="Need Check: ${c.need}"></div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${catStats.map(c => `
+              <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-black text-slate-800 uppercase tracking-tight">${c.label}</span>
+                  <span class="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200">${c.total} thiết bị</span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-medium">Chu kỳ: Tháng ${targetMonth}/${targetYear}</div>
+                <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+                  <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <div class="text-base font-black text-emerald-600">${c.ok}</div>
+                    <div class="text-[9px] font-bold text-emerald-700 uppercase">OK</div>
+                  </div>
+                  <div class="p-2 bg-rose-50 rounded-xl border border-rose-100">
+                    <div class="text-base font-black text-rose-600">${c.ng}</div>
+                    <div class="text-[9px] font-bold text-rose-700 uppercase">NG</div>
+                  </div>
+                  <div class="p-2 bg-amber-50 rounded-xl border border-amber-100">
+                    <div class="text-base font-black text-amber-600">${c.need}</div>
+                    <div class="text-[9px] font-bold text-amber-700 uppercase">Need Check</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    /* ========================================================
+       CHECKER SUBSYSTEM
+       ======================================================== */
+    function renderCheckerPendingDevices() {
+      const container = document.getElementById('checker-pending-devices-list');
+      const wsFilter = document.getElementById('checker-filter-workshop') ? document.getElementById('checker-filter-workshop').value : '';
+      if (!container) return;
+
+      const activeMonth = state.checkerActiveMonth;
+      const activeYear = state.checkerActiveYear;
+
+      const checkedDeviceCodes = new Set(
+        state.inspections
+          .filter(i => parseInt(i.month) === activeMonth && parseInt(i.year) === activeYear)
+          .map(i => i.deviceCode.toLowerCase())
+      );
+
+      const pendingDevices = state.devices.filter(d => {
+        const isPending = !checkedDeviceCodes.has(d.code.toLowerCase());
+        const matchWs = !wsFilter || d.workshop === wsFilter;
+        return isPending && matchWs;
+      });
+
+      if (pendingDevices.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full p-6 text-center bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 text-xs">
+            <i class="fas fa-check-double text-emerald-600 text-xl mb-1 block"></i>
+            Tuyệt vời! Tất cả thiết bị đã hoàn thành kiểm tra trong Tháng ${activeMonth}/${activeYear}.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = pendingDevices.map(d => `
+        <div onclick="openCheckerViewModal('${d.code}')" class="p-3 bg-white border border-slate-200 hover:border-indigo-400 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs shadow-sm hover:shadow">
+          <div>
+            <div class="font-bold text-slate-800 font-mono flex items-center gap-1.5">
+              ${d.code}
+              <i class="fas fa-info-circle text-slate-400 text-[11px]" title="Bấm xem vị trí"></i>
+            </div>
+            <div class="text-[10px] text-slate-500">${d.workshop} • ${d.location}</div>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getDeviceTypeBadgeClass(d.type)}">${d.type}</span>
+        </div>
+      `).join('');
+    }
+
+    function openCheckerViewModal(code) {
+      const dev = state.devices.find(d => d.code === code);
+      if (!dev) return;
+
+      const typeEl = document.getElementById('cv-device-type');
+      typeEl.textContent = dev.type;
+      typeEl.className = `px-2 py-0.5 rounded text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}`;
+
+      document.getElementById('cv-device-code').textContent = dev.code;
+      document.getElementById('cv-device-workshop').textContent = dev.workshop;
+      document.getElementById('cv-device-location').textContent = dev.location;
+
+      const modal = document.getElementById('modal-checker-view-device');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCheckerViewModal() {
+      const modal = document.getElementById('modal-checker-view-device');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function toggleQRScannerModal(show = true, target = 'checker') {
+      state.activeScannerTarget = target;
+      const modal = document.getElementById('modal-qr-scanner');
+      if (!modal) return;
+
+      if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        startCameraQRScanner();
+      } else {
+        stopCameraQRScanner();
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function startCameraQRScanner() {
+      if (typeof Html5Qrcode === 'undefined') {
+        showToast('Trình quét mã QR đang khởi động...', true);
+        return;
+      }
+      if (state.html5QrCodeScanner) {
+        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => {
+          state.html5QrCodeScanner = null;
+        });
+      }
+
+      const qrRegionId = 'qr-reader';
+      state.html5QrCodeScanner = new Html5Qrcode(qrRegionId);
+      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+      state.html5QrCodeScanner.start(
+        { facingMode: 'environment' },
+        config,
+        (decodedText) => {
+          onQRCodeScanned(decodedText);
+        },
+        (errorMessage) => {}
+      ).catch(err => {
+        const container = document.getElementById(qrRegionId);
+        if (container) {
+          container.innerHTML = `
+            <div class="p-4 text-center text-xs text-rose-300">
+              Không thể truy cập camera trực tiếp.<br>Vui lòng cấp quyền máy ảnh trên trình duyệt (chạy trên HTTPS).
+            </div>
+          `;
+        }
+      });
+    }
+
+    function stopCameraQRScanner() {
+      if (state.html5QrCodeScanner) {
+        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => {
+          state.html5QrCodeScanner = null;
+        });
+      }
+    }
+
+    function onQRCodeScanned(decodedText) {
+      toggleQRScannerModal(false);
+      const code = decodedText.trim();
+      
+      if (state.activeScannerTarget === 'checker') {
+        openChecksheetForDevice(code);
+      } else {
+        document.getElementById('guest-input-code').value = code;
+        searchGuestDeviceHistory(code);
+      }
+    }
+
+    function openChecksheetForDevice(code) {
+      const dev = state.devices.find(d => d.code === code);
+      if (!dev) {
+        showToast(`Không tìm thấy dữ liệu cho mã ${code}!`, true);
+        return;
+      }
+
+      state.currentCheckDevice = dev;
+
+      const card = document.getElementById('checksheet-form-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('cs-device-type-badge').textContent = dev.type;
+      document.getElementById('cs-device-type-badge').className = `px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase ${getDeviceTypeBadgeClass(dev.type)}`;
+      document.getElementById('cs-device-id').textContent = dev.code;
+      document.getElementById('cs-device-location').textContent = `${dev.workshop} - ${dev.location}`;
+      document.getElementById('cs-date-display').textContent = new Date().toLocaleDateString('vi-VN');
+      document.getElementById('cs-checker-display').textContent = state.currentUser ? state.currentUser.name : 'Checker';
+
+      renderChecklistItems(dev.type);
+      removeCapturedPhoto();
+      document.getElementById('checksheet-notes').value = '';
+
+      card.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderChecklistItems(type) {
+      const container = document.getElementById('checksheet-items-list');
+      container.innerHTML = '';
+
+      let items = [];
+      if (type === 'Bình bột ABC') {
+        items = [
+          '1. Vị trí đặt bình thông thoáng, dễ thấy, dễ lấy',
+          '2. Đồng hồ đo áp suất (Áp kế) kim chỉ vạch XANH',
+          '3. Chốt niêm phong và kẹp chì còn nguyên vẹn',
+          '4. Vỏ bình nguyên vẹn, không rỉ sét móp méo',
+          '5. Dây vòi phun, loa phun không nứt nẻ tắc nghẽn',
+          '6. Thẻ/tem kiểm định còn hiệu lực'
+        ];
+      } else if (type === 'Bình khí CO2') {
+        items = [
+          '1. Vị trí đặt bình thông thoáng, tránh ánh nắng trực tiếp',
+          '2. Chốt an toàn và dây chì niêm phong nguyên vẹn',
+          '3. Trọng lượng bình đảm bảo (cân nặng không hụt >10%)',
+          '4. Vỏ bình chịu áp lực cao không rỉ sét biến dạng',
+          '5. Cụm loa phun CO2 (loa cứng cách nhiệt) không nứt vỡ',
+          '6. Van xả, cò bóp hoạt động tốt',
+          '7. Tem kiểm định còn hạn sử dụng'
+        ];
+      } else if (type === 'Họng chữa cháy') {
+        items = [
+          '1. Cửa tủ họng PCCC đóng mở trơn tru, kính không vỡ',
+          '2. Cuộn vòi bạt khô ráo, không mốc rách, cuộn đúng kỹ thuật',
+          '3. Khớp nối và đầu lăng phun sáng bóng, gioăng cao su kín',
+          '4. Van góc đóng mở nhẹ nhàng, không rò rỉ nước',
+          '5. Bảng hướng dẫn sử dụng rõ ràng, dễ đọc'
+        ];
+      } else if (type === 'Chuông/ đèn/ còi báo cháy' || type === 'Chuông đèn còi báo cháy') {
+        items = [
+          '1. Nút nhấn khẩn cấp nguyên vẹn, kính/màng bảo vệ tốt',
+          '2. Đèn báo vị trí sáng liên tục',
+          '3. Còi/chuông báo động chắc chắn, không bị che khuất',
+          '4. Không có bụi bẩn hoặc rác quấn quanh cụm thiết bị'
+        ];
+      } else if (type === 'Tủ báo cháy') {
+        items = [
+          '1. Tủ hoạt động ở trạng thái bình thường (Đèn AC Power ON)',
+          '2. Không có báo lỗi Zone hoặc Trouble bất thường',
+          '3. Ắc quy dự phòng điện áp ổn định',
+          '4. Khóa tủ đóng kín, chìa khóa dự phòng tại chỗ'
+        ];
+      } else if (type === 'Quạt hút khói') {
+        items = [
+          '1. Cửa gió tự động mở khi kích hoạt kiểm tra',
+          '2. Động cơ quạt quay êm, không rung giật hoặc kêu lạ',
+          '3. Tủ điều khiển quạt ở chế độ AUTO',
+          '4. Không có vật cản trước cửa gió hút và thổi'
+        ];
+      } else {
+        items = [
+          '1. Vị trí lắp đặt đúng vị trí thiết kế',
+          '2. Ngoại quan thiết bị sạch sẽ, nguyên vẹn',
+          '3. Kiểm tra vận hành cơ bản đạt yêu cầu'
+        ];
+      }
+
+      items.forEach((itemText, idx) => {
+        const div = document.createElement('div');
+        div.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs';
+        div.innerHTML = `
+          <div class="font-medium text-slate-800 flex-1">
+            ${itemText} <span class="text-rose-500 font-bold">*</span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-emerald-50">
+              <input type="radio" name="check_item_${idx}" value="OK" class="text-emerald-600 focus:ring-emerald-500" required checked>
+              <span class="font-bold text-emerald-700">OK</span>
+            </label>
+            <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-rose-50">
+              <input type="radio" name="check_item_${idx}" value="NG" class="text-rose-600 focus:ring-rose-500" required>
+              <span class="font-bold text-rose-700">NG</span>
+            </label>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function triggerCameraCapture() {
+      const mobileInput = document.getElementById('camera-file-input');
+      if (mobileInput && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+        mobileInput.click();
+      } else {
+        openWebcamModal();
+      }
+    }
+
+    function compressImageDataUrl(dataUrl, maxWidth = 1024, quality = 0.78) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth) {
+            h = Math.round((h * maxWidth) / w);
+            w = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    function handleCameraFileInput(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const compressed = await compressImageDataUrl(e.target.result);
+        setCapturedPhoto(compressed);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openWebcamModal() {
+      const modal = document.getElementById('modal-webcam');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          state.webcamStream = stream;
+          const video = document.getElementById('webcam-video');
+          if (video) video.srcObject = stream;
+        })
+        .catch(err => {
+          showToast('Không thể bật WebCam. Vui lòng cấp quyền!', true);
+          closeWebcamModal();
+        });
+    }
+
+    function closeWebcamModal() {
+      const modal = document.getElementById('modal-webcam');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      if (state.webcamStream) {
+        state.webcamStream.getTracks().forEach(track => track.stop());
+        state.webcamStream = null;
+      }
+    }
+
+    async function takeWebcamSnapshot() {
+      const video = document.getElementById('webcam-video');
+      const canvas = document.getElementById('webcam-canvas');
+      if (!video || !canvas) return;
+
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const compressed = await compressImageDataUrl(rawDataUrl);
+      setCapturedPhoto(compressed);
+      closeWebcamModal();
+    }
+
+    function setCapturedPhoto(dataUrl) {
+      state.capturedPhotoDataUrl = dataUrl;
+      const previewImg = document.getElementById('captured-preview-img');
+      const previewWrapper = document.getElementById('captured-photo-wrapper');
+      const promptBtn = document.getElementById('camera-prompt-btn');
+
+      if (previewImg && previewWrapper && promptBtn) {
+        previewImg.src = dataUrl;
+        previewWrapper.classList.remove('hidden');
+        promptBtn.classList.add('hidden');
+      }
+    }
+
+    function removeCapturedPhoto() {
+      state.capturedPhotoDataUrl = null;
+      const previewWrapper = document.getElementById('captured-photo-wrapper');
+      const promptBtn = document.getElementById('camera-prompt-btn');
+      const mobileInput = document.getElementById('camera-file-input');
+
+      if (previewWrapper) previewWrapper.classList.add('hidden');
+      if (promptBtn) promptBtn.classList.remove('hidden');
+      if (mobileInput) mobileInput.value = '';
+    }
+
+    async function submitChecksheet() {
+      if (!state.currentCheckDevice) {
+        showToast('Chưa chọn thiết bị nào!', true);
+        return;
+      }
+
+      if (!state.capturedPhotoDataUrl) {
+        showToast('BẮT BUỘC chụp ảnh thiết bị tại hiện trường trước khi gửi!', true);
+        return;
+      }
+
+      const itemsContainer = document.getElementById('checksheet-items-list');
+      const radioGroups = itemsContainer.querySelectorAll('div.p-3');
+      const checklistResult = {};
+      let hasNG = false;
+
+      for (let i = 0; i < radioGroups.length; i++) {
+        const checkedRadio = document.querySelector(`input[name="check_item_${i}"]:checked`);
+        if (!checkedRadio) {
+          showToast(`Vui lòng hoàn thành tất cả các mục kiểm tra (*)`, true);
+          return;
+        }
+        const itemLabel = radioGroups[i].querySelector('.font-medium').innerText.replace('*', '').trim();
+        checklistResult[itemLabel] = checkedRadio.value;
+        if (checkedRadio.value === 'NG') {
+          hasNG = true;
+        }
+      }
+
+      const submitBtn = document.getElementById('btn-submit-checksheet');
+      const origHtml = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải ảnh & đồng bộ Cloud...';
+      }
+
+      try {
+        const notes = document.getElementById('checksheet-notes') ? document.getElementById('checksheet-notes').value.trim() : '';
+        const now = new Date();
+        const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const inspectionMonth = state.checkerActiveMonth || (now.getMonth() + 1);
+        const inspectionYear = state.checkerActiveYear || now.getFullYear();
+        const inspectionId = 'INS-' + Date.now();
+
+        const photoUrl = await uploadPhotoToSupabaseStorage(
+          state.capturedPhotoDataUrl,
+          state.currentCheckDevice.code,
+          inspectionId
+        );
+
+        const newInspection = {
+          id: inspectionId,
+          deviceCode: state.currentCheckDevice.code,
+          deviceType: state.currentCheckDevice.type,
+          workshop: state.currentCheckDevice.workshop,
+          checkerName: state.currentUser ? state.currentUser.name : 'Checker',
+          timestamp: dateString,
+          month: inspectionMonth,
+          year: inspectionYear,
+          status: hasNG ? 'NG' : 'OK',
+          photo: photoUrl,
+          checklist: checklistResult,
+          notes: notes
+        };
+
+        state.inspections.unshift(newInspection);
+        await cloudSaveInspection(newInspection);
+
+        showToast(`Đã lưu lên Supabase Tháng ${inspectionMonth}/${inspectionYear}: ${newInspection.status}!`);
+        document.getElementById('checksheet-form-card').classList.add('hidden');
+        removeCapturedPhoto();
+        state.currentCheckDevice = null;
+        renderCheckerPendingDevices();
+      } catch (err) {
+        console.error("Submit checksheet error:", err);
+        showToast('Lỗi khi tải dữ liệu lên Supabase: ' + err.message, true);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origHtml;
+        }
+      }
+    }
+
+    /* ========================================================
+       GUEST / AUDITOR SUBSYSTEM
+       ======================================================== */
+    function searchGuestDeviceHistory(codeToSearch = null) {
+      const code = (codeToSearch || (document.getElementById('guest-input-code') ? document.getElementById('guest-input-code').value : '')).trim();
+      const container = document.getElementById('guest-history-results');
+      if (!container) return;
+
+      if (!code) {
+        showToast('Vui lòng nhập hoặc quét mã thiết bị!', true);
+        return;
+      }
+
+      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
+      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
+
+      if (!dev && devInspections.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+            Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${code}</b>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">
+                ${dev ? dev.type : 'Thiết bị PCCC'}
+              </span>
+              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${code}</h4>
+              <p class="text-xs text-slate-500">${dev ? `${dev.workshop} • ${dev.location}` : 'Chưa có thông tin vị trí'}</p>
+            </div>
+            <span class="text-xs font-bold text-slate-400">Đã kiểm tra: ${devInspections.length} lần</span>
+          </div>
+
+          <div class="space-y-3">
+            <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch Sử Kiểm Tra Gần Nhất</h5>
+            ${devInspections.length === 0 ? '<div class="text-xs text-slate-400 italic">Chưa có lượt checksheet nào trong hệ thống.</div>' : ''}
+            ${devInspections.map(ins => `
+              <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'} flex flex-col sm:flex-row gap-3 text-xs">
+                ${ins.photo ? `<a href="${ins.photo}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${ins.photo}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
+                <div class="space-y-1 flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} text-xs flex items-center gap-1.5">
+                      <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Trạng thái: ${ins.status}
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-mono">${ins.timestamp}</span>
+                  </div>
+                  <div class="text-slate-600">Người kiểm tra: <b>${ins.checkerName}</b></div>
+                  ${ins.notes ? `<div class="text-slate-700 bg-white/70 p-2 rounded border border-slate-200/50 text-[11px]"><b>Ghi chú:</b> ${ins.notes}</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
