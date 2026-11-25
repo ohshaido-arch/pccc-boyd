@@ -14,6 +14,8 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <!-- SheetJS for Excel Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
     body {
@@ -22,14 +24,187 @@
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
+
+    /* ================= STYLE CHO KHUNG IN TEM QR CHUẨN 12 MÃ / 1 TRANG A4 DỌC (QR 2/3 Ô) ================= */
+    .qr-a4-page-wrapper {
+      margin: 0 auto 20px auto;
+      max-width: 194mm;
+    }
+    .qr-a4-page {
+      width: 100%;
+      aspect-ratio: 194 / 279;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+      gap: 4mm;
+      background: #ffffff;
+      padding: 4mm;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+      box-sizing: border-box;
+    }
+    .qr-print-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      border: 1.5px solid #94a3b8;
+      border-radius: 8px;
+      padding: 2.5mm 2.5mm 2mm 2.5mm;
+      background: #ffffff;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+      text-align: center;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* Vùng QR chiếm 2/3 chiều cao ô tem */
+    .qr-print-qr-zone {
+      width: 100%;
+      height: 66%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 1.5mm;
+      box-sizing: border-box;
+    }
+    .qr-print-img-box {
+      height: 100%;
+      max-width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 1.5mm;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .qr-print-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      image-rendering: pixelated;
+    }
+    /* Vùng thông tin chiếm 1/3 phía dưới ô tem */
+    .qr-print-info {
+      width: 100%;
+      height: 34%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      overflow: hidden;
+    }
+    .qr-print-type {
+      width: 100%;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #0369a1;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qr-print-code {
+      width: 100%;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 11.5px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qr-print-loc {
+      width: 100%;
+      font-size: 9px;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm;
+      }
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print,
+      .qr-page-label {
+        display: none !important;
+      }
+      #modal-qr-print-preview {
+        position: static !important;
+        inset: auto !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        overflow: visible !important;
+      }
+      #qr-print-sheet-wrapper {
+        max-width: none !important;
+        width: 100% !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+      #qr-print-toolbar {
+        display: none !important;
+      }
+      #qr-print-body {
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+      }
+      .qr-a4-page-wrapper {
+        margin: 0 !important;
+        max-width: none !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .qr-a4-page-wrapper:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+      .qr-a4-page {
+        width: 100% !important;
+        height: 279mm !important;
+        aspect-ratio: auto !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        gap: 4mm !important;
+      }
+    }
   </style>
-  <!-- Supabase JS SDK v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
   <!-- ================= TOP NAVIGATION BAR ================= -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
       <!-- Brand Logo (BOYD THERMAL by EATON) -->
       <div class="flex items-center gap-3 cursor-pointer" onclick="navigateHome()">
@@ -59,13 +234,13 @@
   </header>
 
   <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold hidden transition-all duration-300">
+  <div id="toast" class="no-print fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold hidden transition-all duration-300">
     <i class="fas fa-bell"></i>
     <span id="toast-msg">Thông báo hệ thống</span>
   </div>
 
   <!-- ================= MAIN APPLICATION CONTAINER ================= -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+  <main class="no-print flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
     <!-- ================= VIEW 1: AUTHENTICATION / PORTAL (CLIENT 1) ================= -->
     <section id="section-login" class="max-w-md mx-auto py-8 sm:py-12">
@@ -95,7 +270,7 @@
           </button>
         </div>
 
-        <!-- OWNER Login Form (Default admin / admin) -->
+        <!-- OWNER Login Form -->
         <form id="form-login-owner" onsubmit="event.preventDefault(); handleLoginOwner();" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Tài khoản Quản lý (OWNER)</label>
@@ -188,12 +363,10 @@
         </div>
       </div>
 
-      <!-- Tab 1: Device Management (Loại -> Mã -> Xưởng -> Vị trí -> Thao tác -> Lịch sử -> Con mắt xem chi tiết) -->
+      <!-- Tab 1: Device Management -->
       <div id="owner-view-devices" class="space-y-4">
-        <!-- Controls: Filters, Sort & Actions -->
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <!-- Filter by Device Type -->
             <select id="owner-filter-type" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
               <option value="">Tất cả loại thiết bị</option>
               <option value="Bình bột ABC">Bình bột ABC</option>
@@ -204,7 +377,6 @@
               <option value="Quạt hút khói">Quạt hút khói</option>
             </select>
 
-            <!-- Filter by Workshop -->
             <select id="owner-filter-workshop" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
               <option value="">Tất cả xưởng</option>
               <option value="Xưởng 1">Xưởng 1</option>
@@ -213,7 +385,6 @@
               <option value="Xưởng 4">Xưởng 4</option>
             </select>
 
-            <!-- Search input -->
             <input type="text" id="owner-search-code" oninput="renderOwnerDeviceTable()" placeholder="Tìm theo mã hoặc vị trí..." class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
           </div>
 
@@ -222,7 +393,6 @@
           </button>
         </div>
 
-        <!-- Devices Table -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -245,7 +415,7 @@
         </div>
       </div>
 
-      <!-- Tab 2: QR Management (Export to Excel & In 18 Tem/A4 Dọc) -->
+      <!-- Tab 2: QR Management (In Tem QR / Xuất PDF chuẩn A4 & Xuất DS Excel chuẩn .xlsx) -->
       <div id="owner-view-qr" class="space-y-4 hidden">
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -253,18 +423,21 @@
             <p class="text-[11px] text-slate-500">Mã QR tự động tạo theo mã định danh của từng thiết bị trong nhà máy</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <!-- Nút Xuất file Excel (.xlsx) duy nhất -->
-            <button onclick="exportDevicesToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
-              <i class="fas fa-file-excel text-emerald-200 text-sm"></i> Xuất File Excel (.xlsx)
+            <!-- Nút In Tem QR / Xuất PDF chuẩn A4 (Khắc phục triệt để lỗi dấu X đỏ của Excel) -->
+            <button onclick="openPrintQRLabelsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
+              <i class="fas fa-print text-indigo-200 text-sm"></i> In Tem QR / Xuất PDF (Chuẩn A4)
+            </button>
+            <!-- Nút Xuất danh sách Excel chuẩn (.xlsx bằng SheetJS) -->
+            <button onclick="exportDevicesListToExcelXlsx()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
+              <i class="fas fa-file-excel text-emerald-200 text-sm"></i> Xuất DS Excel (.xlsx)
             </button>
           </div>
         </div>
 
-        <!-- Khung thống kê số lượng thiết bị -->
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs flex items-center justify-between">
+        <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl text-slate-700 text-xs flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <i class="fas fa-qrcode text-emerald-600"></i>
-            <span>Mỗi thiết bị khi xuất file Excel sẽ được bố trí gói gọn trong <b>1 ô duy nhất</b> (gồm: Loại thiết bị, Mã thiết bị, Xưởng & Vị trí).</span>
+            <i class="fas fa-qrcode text-indigo-600"></i>
+            <span>Bấm <b>In Tem QR / Xuất PDF (Chuẩn A4)</b> để tự động căn chuẩn <b>12 mã / 1 trang A4 Dọc</b> (mã QR lớn chiếm 2/3 ô, thông tin 1/3 phía dưới).</span>
           </div>
           <span class="font-bold text-[11px] bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
             Tổng cộng: <span id="owner-qr-total-count" class="text-emerald-600 font-mono">0</span> thiết bị
@@ -277,9 +450,8 @@
         </div>
       </div>
 
-      <!-- Tab 3: Reports & Inspection Stats (Visual Chart with Month & Year Filter) -->
+      <!-- Tab 3: Reports & Inspection Stats -->
       <div id="owner-view-reports" class="space-y-4 hidden">
-        <!-- Month & Year Sort Bar -->
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-2">
             <i class="fas fa-filter text-indigo-600 text-sm"></i>
@@ -287,20 +459,16 @@
           </div>
           <div class="flex items-center gap-2">
             <select id="report-filter-month" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
-              <!-- Months 1 -> 12 -->
             </select>
             <select id="report-filter-year" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
-              <!-- Years -->
             </select>
           </div>
         </div>
 
-        <div id="report-dashboard-container">
-          <!-- Rendered dynamically -->
-        </div>
+        <div id="report-dashboard-container"></div>
       </div>
 
-      <!-- Tab 4: Checker Accounts Management (with Change Password per Checker) -->
+      <!-- Tab 4: Checker Accounts Management -->
       <div id="owner-view-accounts" class="space-y-4 hidden">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 max-w-xl">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -308,20 +476,17 @@
               <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý & Cấp Mới Tài Khoản CHECKER</h4>
               <p class="text-[11px] text-slate-400">Các tài khoản nhân viên kiểm tra hiện trường</p>
             </div>
-            <button onclick="addNewChecker()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1.5">
+            <button onclick="openAddCheckerModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1.5">
               <i class="fas fa-user-plus"></i> Thêm Checker
             </button>
           </div>
-          <div id="owner-checker-list" class="space-y-2">
-            <!-- Injected via JS -->
-          </div>
+          <div id="owner-checker-list" class="space-y-2"></div>
         </div>
       </div>
     </section>
 
     <!-- ================= VIEW 3: CHECKER WORKSPACE ================= -->
     <section id="section-checker" class="space-y-6 hidden">
-      <!-- Direct QR Scan Bar -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2">
@@ -334,13 +499,11 @@
             <button onclick="openCheckerCycleModal()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold underline ml-1">Đổi chu kỳ</button>
           </div>
         </div>
-        <!-- Camera Scan QR Button (Primary Action) -->
         <button onclick="toggleQRScannerModal(true, 'checker')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-lg flex items-center justify-center gap-2.5 transition-all transform active:scale-95">
           <i class="fas fa-qrcode text-emerald-200 text-base"></i> Quét Mã Tem QR Thiết Bị
         </button>
       </div>
 
-      <!-- Pending Devices List (Only Unchecked Devices, with Workshop filter, View info only - NO Checksheet trigger) -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
@@ -349,7 +512,6 @@
             </h4>
             <p class="text-[11px] text-slate-400">Danh sách thiết bị chưa được kiểm tra trong chu kỳ đã chọn</p>
           </div>
-          <!-- Sort by Workshop -->
           <div class="flex items-center gap-2 w-full sm:w-auto">
             <label class="text-[11px] font-bold text-slate-600 whitespace-nowrap"><i class="fas fa-industry text-slate-400 mr-1"></i> Chọn xưởng:</label>
             <select id="checker-filter-workshop" onchange="renderCheckerPendingDevices()" class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-emerald-500">
@@ -362,14 +524,11 @@
           </div>
         </div>
 
-        <div id="checker-pending-devices-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1">
-          <!-- Injected via JS -->
-        </div>
+        <div id="checker-pending-devices-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1"></div>
       </div>
 
-      <!-- ACTIVE CHECKSHEET FORM (Strictly Opened ONLY via QR Scan) -->
+      <!-- ACTIVE CHECKSHEET FORM -->
       <div id="checksheet-form-card" class="bg-white rounded-3xl border-2 border-emerald-500/80 shadow-2xl p-5 sm:p-7 space-y-6 hidden">
-        <!-- Checksheet Header -->
         <div class="flex items-start justify-between border-b border-slate-100 pb-4">
           <div>
             <div class="flex items-center gap-2">
@@ -386,34 +545,26 @@
           </div>
         </div>
 
-        <!-- Checklist Items with Mandatory Asterisk (*) -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-black uppercase tracking-wider text-slate-800">Các Hạng Mục Kiểm Tra Bắt Buộc <span class="text-rose-500">(*)</span></h4>
             <span class="text-[11px] text-slate-400">Chọn OK hoặc NG cho từng tiêu chí</span>
           </div>
-
-          <div id="checksheet-items-list" class="space-y-2">
-            <!-- Dynamic Criteria injected based on ABC, CO2, Cabinet, etc. -->
-          </div>
+          <div id="checksheet-items-list" class="space-y-2"></div>
         </div>
 
-        <!-- CAMERA CAPTURE SECTION (NO FILE UPLOAD ALLOWED - ONLY LIVE CAMERA CAPTURE) -->
         <div class="space-y-2 border-t border-slate-100 pt-4">
           <label class="block text-xs font-bold text-slate-800">
             Chụp Ảnh Hiện Trường <span class="text-rose-500 font-bold">* (Bắt Buộc)</span>
           </label>
           <p class="text-[11px] text-slate-400 italic">Hệ thống kích hoạt camera trực tiếp, ngăn chặn chọn ảnh cũ từ bộ sưu tập để đảm bảo tính khách quan.</p>
 
-          <!-- Action buttons for Photo Capture -->
           <div class="flex flex-col sm:flex-row items-center gap-3">
             <button type="button" id="camera-prompt-btn" onclick="triggerCameraCapture()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl text-xs shadow flex items-center justify-center gap-2">
               <i class="fas fa-camera text-emerald-400"></i> Bật Camera Chụp Ảnh Ngay
             </button>
-            <!-- Native file input with strict camera-only attributes (hidden) -->
             <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleCameraFileInput(event)">
 
-            <!-- Photo Preview Area -->
             <div id="captured-photo-wrapper" class="hidden items-center gap-3">
               <div class="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-100 shadow-sm">
                 <img id="captured-preview-img" src="" alt="Captured" class="w-full h-full object-cover">
@@ -430,13 +581,11 @@
           </div>
         </div>
 
-        <!-- Notes / Remarks -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Ghi Chú Thêm (Nếu có phát hiện bất thường)</label>
           <textarea id="checksheet-notes" rows="2" placeholder="Ví dụ: Áp suất giảm nhẹ, tem kiểm định còn hạn..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
         </div>
 
-        <!-- Submit Button -->
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
           <button type="button" onclick="document.getElementById('checksheet-form-card').classList.add('hidden')" class="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-800">
             Hủy Bỏ
@@ -448,21 +597,18 @@
       </div>
     </section>
 
-    <!-- ================= VIEW 4: GUEST / AUDITOR WORKSPACE (QR & TOTAL) ================= -->
+    <!-- ================= VIEW 4: GUEST / AUDITOR WORKSPACE ================= -->
     <section id="section-guest" class="space-y-6 hidden">
-      <!-- Top banner for GUEST / AUDITOR -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
           <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu & Báo Cáo Tổng Hợp (TOTAL)</span>
         </div>
-        <!-- Scan QR for Guest / Auditor -->
         <button onclick="toggleQRScannerModal(true, 'guest')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
           <i class="fas fa-qrcode"></i> Quét QR Tra Cứu Thiết Bị
         </button>
       </div>
 
-      <!-- Quick Search Code Input -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
         <input type="text" id="guest-input-code" placeholder="Nhập mã thiết bị (ví dụ: ABC-AGM-GF2-D/03-0004)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500">
         <button onclick="searchGuestDeviceHistory()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs">
@@ -470,12 +616,9 @@
         </button>
       </div>
 
-      <!-- Search Result Display for Guest -->
       <div id="guest-history-results"></div>
 
-      <!-- TOTAL DASHBOARD FOR GUEST (Identical to OWNER Report Dashboard) -->
       <div class="space-y-4">
-        <!-- Month & Year Filter for Guest Total Dashboard -->
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-2">
             <i class="fas fa-chart-column text-amber-500 text-sm"></i>
@@ -483,26 +626,49 @@
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-slate-500 font-medium">Chu kỳ:</span>
-            <select id="guest-filter-month" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500">
-              <!-- Months -->
-            </select>
-            <select id="guest-filter-year" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500">
-              <!-- Years -->
-            </select>
+            <select id="guest-filter-month" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500"></select>
+            <select id="guest-filter-year" onchange="refreshGuestDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500"></select>
           </div>
         </div>
-
-        <div id="guest-total-dashboard-container">
-          <!-- Injected via JS -->
-        </div>
+        <div id="guest-total-dashboard-container"></div>
       </div>
     </section>
 
   </main>
 
+  <!-- ================= MODAL: XEM TRƯỚC & IN TEM QR CHUẨN A4 DỌC ================= -->
+  <div id="modal-qr-print-preview" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-5">
+    <div id="qr-print-sheet-wrapper" class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
+      <div id="qr-print-toolbar" class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between flex-wrap gap-3 shrink-0">
+        <div>
+          <h3 class="text-sm font-extrabold flex items-center gap-2">
+            <i class="fas fa-print text-emerald-400"></i> Xem Trước In Tem QR PCCC (12 mã / trang A4 Dọc — QR lớn 2/3 ô)
+          </h3>
+          <p class="text-[11px] text-slate-300 mt-0.5">
+            Tổng số tem: <b id="qr-print-count" class="text-emerald-300">0</b> • Tổng số trang A4: <b id="qr-print-pages" class="text-amber-300">0</b> • Chọn <b>In ngay</b> hoặc <b>Save as PDF</b>
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition">
+            <i class="fas fa-print"></i> In Ngay / Lưu PDF
+          </button>
+          <button onclick="closePrintQRLabelsModal()" class="bg-white/10 hover:bg-white/20 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition">
+            <i class="fas fa-times"></i> Đóng
+          </button>
+        </div>
+      </div>
+
+      <div id="qr-print-body" class="p-4 sm:p-5 overflow-y-auto bg-slate-200 flex-1">
+        <div id="qr-print-grid-container" class="space-y-5">
+          <!-- Các trang A4 (mỗi trang đúng 12 tem QR) được render tự động tại đây -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= MODAL: CHECKER SELECT INSPECTION CYCLE ================= -->
-  <div id="modal-checker-cycle" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+  <div id="modal-checker-cycle" class="no-print fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
       <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-5">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
@@ -523,15 +689,11 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Tháng:</label>
-            <select id="cycle-select-month" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
-              <!-- Rendered via JS -->
-            </select>
+            <select id="cycle-select-month" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"></select>
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Năm:</label>
-            <select id="cycle-select-year" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
-              <!-- Rendered via JS -->
-            </select>
+            <select id="cycle-select-year" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"></select>
           </div>
         </div>
 
@@ -540,7 +702,7 @@
           <span>Kết quả checksheet sẽ được cập nhật trực tiếp vào hệ thống báo cáo theo tháng đã chọn.</span>
         </div>
 
-        <button onclick="confirmCheckerCycle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+        <button onclick="confirmCheckerCycle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg transition-all flex items-center justify-center gap-2">
           <i class="fas fa-arrow-right"></i> Bắt Đầu Kiểm Tra
         </button>
       </div>
@@ -548,7 +710,7 @@
   </div>
 
   <!-- ================= MODAL: ADD / EDIT DEVICE (OWNER) ================= -->
-  <div id="modal-device-form" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-device-form" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
         <h3 id="modal-device-title" class="text-sm font-bold flex items-center gap-2">
@@ -600,8 +762,8 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: VIEW DEVICE INSPECTION HISTORY (EYE ICON) ================= -->
-  <div id="modal-device-history" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+  <!-- ================= MODAL: VIEW DEVICE INSPECTION HISTORY ================= -->
+  <div id="modal-device-history" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
         <h3 class="text-sm font-bold flex items-center gap-2">
@@ -611,22 +773,17 @@
       </div>
 
       <div class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-        <div id="history-modal-device-info" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-          <!-- Injected via JS -->
-        </div>
-
+        <div id="history-modal-device-info" class="p-3 bg-slate-50 rounded-xl border border-slate-200"></div>
         <div class="space-y-3">
           <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh Sách Lượt Kiểm Tra</h4>
-          <div id="history-modal-inspections-list" class="space-y-2.5">
-            <!-- Injected via JS -->
-          </div>
+          <div id="history-modal-inspections-list" class="space-y-2.5"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL: VIEW DEVICE INFO ONLY (CHECKER - NO CHECKSHEET) ================= -->
-  <div id="modal-checker-view-device" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+  <!-- ================= MODAL: VIEW DEVICE INFO ONLY (CHECKER) ================= -->
+  <div id="modal-checker-view-device" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -657,7 +814,7 @@
   </div>
 
   <!-- ================= MODAL: CHANGE OWNER PASSWORD ================= -->
-  <div id="modal-change-password" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-change-password" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
         <h3 class="text-sm font-bold flex items-center gap-2">
@@ -690,8 +847,19 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: CUSTOM DIALOG (ADD CHECKER / EDIT PASS / CONFIRM DELETE) ================= -->
+  <div id="modal-custom-dialog" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 id="custom-dialog-title" class="text-xs font-bold uppercase tracking-wider">Xác nhận</h3>
+        <button onclick="closeCustomDialog()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="custom-dialog-body" class="p-5 space-y-3 text-xs"></div>
+    </div>
+  </div>
+
   <!-- ================= MODAL: CAMERA QR SCANNER ================= -->
-  <div id="modal-qr-scanner" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-qr-scanner" class="no-print fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -700,7 +868,6 @@
         <button onclick="toggleQRScannerModal(false)" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-4 space-y-3 text-center">
-        <!-- Reader Container -->
         <div id="qr-reader" class="w-full overflow-hidden rounded-xl border-2 border-dashed border-emerald-500 min-h-[250px] bg-slate-950 flex items-center justify-center text-white text-xs">
           Đang khởi tạo camera...
         </div>
@@ -710,7 +877,7 @@
   </div>
 
   <!-- ================= MODAL: WEBCAM SNAPSHOT FOR DESKTOP ================= -->
-  <div id="modal-webcam" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-webcam" class="no-print fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -731,7 +898,7 @@
   </div>
 
   <!-- ================= FOOTER ================= -->
-  <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+  <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
       EHS Department &copy; 2026 <b>EHS BOYD by EATON</b> • Fire Equipment Inspection Platform
     </div>
@@ -740,16 +907,14 @@
   <!-- ================= JAVASCRIPT APPLICATION CORE (SUPABASE CLOUD INTEGRATED) ================= -->
   <script>
     /* ============================================================================
-       CẤU HÌNH KẾT NỐI SUPABASE (BẠN CHỈ CẦN DÁN 2 DÒNG MÃ CỦA BẠN VÀO ĐÂY)
+       CẤU HÌNH KẾT NỐI SUPABASE
        ============================================================================ */
     const SUPABASE_URL = "https://xmitwgsxbhkmfnrdbdph.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_LnLd1VBwT1PLc6Kax3TUOw_q_OAxFJ2";
 
-    /* ========================================================
-       KHỞI TẠO SUPABASE & BIẾN HỆ THỐNG
-       ======================================================== */
     let supabaseClient = null;
     let isSupabaseReady = false;
+    let supabasePollTimer = null;
 
     try {
       if (
@@ -778,7 +943,7 @@
         badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ${text || "Lỗi kết nối Supabase"}`;
       } else {
         badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700";
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> ${text || "Chưa gắn mã Supabase (Chạy tạm Local)"}`;
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> ${text || "Chế độ Local"}`;
       }
     }
 
@@ -860,7 +1025,7 @@
 
     let state = {
       currentUser: null,
-      ownerAuth: DEFAULT_OWNER_AUTH,
+      ownerAuth: { ...DEFAULT_OWNER_AUTH },
       devices: [],
       checkers: [],
       inspections: [],
@@ -872,6 +1037,33 @@
       checkerActiveMonth: new Date().getMonth() + 1,
       checkerActiveYear: new Date().getFullYear()
     };
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /* ========================================================
+       CUSTOM DIALOG HELPER (THAY THẾ PROMPT / CONFIRM)
+       ======================================================== */
+    function openCustomDialog(title, bodyHtml) {
+      document.getElementById('custom-dialog-title').textContent = title;
+      document.getElementById('custom-dialog-body').innerHTML = bodyHtml;
+      const modal = document.getElementById('modal-custom-dialog');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCustomDialog() {
+      const modal = document.getElementById('modal-custom-dialog');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
 
     /* ========================================================
        APP INITIALIZATION & SUPABASE CLOUD SYNC
@@ -886,22 +1078,29 @@
       if (isSupabaseReady) {
         await initSupabaseCloudSync();
       } else {
-        updateCloudSyncBadge("offline", "Chưa dán mã Supabase (Chạy tạm Local)");
+        updateCloudSyncBadge("offline", "Chế độ Local");
       }
     });
 
     function loadDataFromLocalStorage() {
-      const devStr = localStorage.getItem(STORAGE_KEY_DEVICES);
-      state.devices = devStr ? JSON.parse(devStr) : [...DEFAULT_DEVICES];
+      try {
+        const devStr = localStorage.getItem(STORAGE_KEY_DEVICES);
+        state.devices = devStr ? JSON.parse(devStr) : [...DEFAULT_DEVICES];
 
-      const chkStr = localStorage.getItem(STORAGE_KEY_CHECKERS);
-      state.checkers = chkStr ? JSON.parse(chkStr) : [...DEFAULT_CHECKERS];
+        const chkStr = localStorage.getItem(STORAGE_KEY_CHECKERS);
+        state.checkers = chkStr ? JSON.parse(chkStr) : [...DEFAULT_CHECKERS];
 
-      const insStr = localStorage.getItem(STORAGE_KEY_INSPECTIONS);
-      state.inspections = insStr ? JSON.parse(insStr) : [...DEFAULT_INSPECTIONS];
+        const insStr = localStorage.getItem(STORAGE_KEY_INSPECTIONS);
+        state.inspections = insStr ? JSON.parse(insStr) : [...DEFAULT_INSPECTIONS];
 
-      const authStr = localStorage.getItem(STORAGE_KEY_OWNER_AUTH);
-      state.ownerAuth = authStr ? JSON.parse(authStr) : { ...DEFAULT_OWNER_AUTH };
+        const authStr = localStorage.getItem(STORAGE_KEY_OWNER_AUTH);
+        state.ownerAuth = authStr ? JSON.parse(authStr) : { ...DEFAULT_OWNER_AUTH };
+      } catch (e) {
+        state.devices = [...DEFAULT_DEVICES];
+        state.checkers = [...DEFAULT_CHECKERS];
+        state.inspections = [...DEFAULT_INSPECTIONS];
+        state.ownerAuth = { ...DEFAULT_OWNER_AUTH };
+      }
     }
 
     function saveLocalBackup() {
@@ -1006,32 +1205,55 @@
       refreshActiveViews();
     }
 
+    function startSupabasePollingFallback() {
+      if (supabasePollTimer) clearInterval(supabasePollTimer);
+      supabasePollTimer = setInterval(() => {
+        if (isSupabaseReady && supabaseClient) {
+          fetchAllSupabaseData().catch(() => {});
+        }
+      }, 30000);
+    }
+
     async function initSupabaseCloudSync() {
       try {
         updateCloudSyncBadge("connected", "Đang đồng bộ Supabase...");
         await fetchAllSupabaseData();
         updateCloudSyncBadge("connected", "Supabase Cloud Online");
-
-        supabaseClient
-          .channel('pccc-realtime-channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_devices' }, () => {
-            fetchAllSupabaseData();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_checkers' }, () => {
-            fetchAllSupabaseData();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_inspections' }, () => {
-            fetchAllSupabaseData();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_settings' }, () => {
-            fetchAllSupabaseData();
-          })
-          .subscribe();
-
       } catch (err) {
         console.error("Supabase Sync Error:", err);
         updateCloudSyncBadge("error", "Lỗi kết nối Supabase");
-        showToast("Không thể kết nối Supabase. Hãy kiểm tra URL, Key và SQL tạo bảng!", true);
+        showToast("Không thể kết nối Supabase. Đang dùng dữ liệu Local.", true);
+        return;
+      }
+
+      // Môi trường Canvas Preview (blob:) chặn WebSocket; dùng đồng bộ định kỳ 30s để không báo lỗi console
+      if (window.location.protocol === 'blob:') {
+        startSupabasePollingFallback();
+        return;
+      }
+
+      try {
+        supabaseClient
+          .channel('pccc-realtime-channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_devices' }, () => {
+            fetchAllSupabaseData().catch(() => {});
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_checkers' }, () => {
+            fetchAllSupabaseData().catch(() => {});
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_inspections' }, () => {
+            fetchAllSupabaseData().catch(() => {});
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_settings' }, () => {
+            fetchAllSupabaseData().catch(() => {});
+          })
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              startSupabasePollingFallback();
+            }
+          });
+      } catch (rtErr) {
+        startSupabasePollingFallback();
       }
     }
 
@@ -1183,7 +1405,7 @@
       const msgEl = document.getElementById('toast-msg');
       if (!toast || !msgEl) return;
       msgEl.textContent = msg;
-      toast.className = `fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transition-all transform duration-300 ${isError ? 'bg-rose-600' : 'bg-emerald-600'}`;
+      toast.className = `no-print fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transition-all transform duration-300 ${isError ? 'bg-rose-600' : 'bg-emerald-600'}`;
       toast.classList.remove('hidden');
       setTimeout(() => {
         toast.classList.add('hidden');
@@ -1243,7 +1465,7 @@
         state.ownerAuth.password = newP;
         await cloudSaveOwnerAuth(state.ownerAuth);
         closeChangePasswordModal();
-        showToast('Đổi mật khẩu OWNER thành công và đã lưu lên Supabase!');
+        showToast('Đổi mật khẩu OWNER thành công!');
       } catch (err) {
         showToast('Lỗi lưu mật khẩu: ' + err.message, true);
       }
@@ -1279,14 +1501,14 @@
         item.innerHTML = `
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span class="font-bold text-slate-800">${chk.name}</span>
-            <span class="font-mono text-slate-400 text-[11px]">(Mật khẩu: ${chk.pass})</span>
+            <span class="font-bold text-slate-800">${escapeHtml(chk.name)}</span>
+            <span class="font-mono text-slate-400 text-[11px]">(Mật khẩu: ${escapeHtml(chk.pass)})</span>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="changeCheckerPassword('${chk.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-[11px] px-2 py-1 rounded hover:bg-indigo-50" title="Đổi mật khẩu">
+            <button onclick="openChangeCheckerPassModal('${escapeHtml(chk.id)}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-[11px] px-2 py-1 rounded hover:bg-indigo-50" title="Đổi mật khẩu">
               <i class="fas fa-key"></i> Đổi pass
             </button>
-            <button onclick="deleteCheckerAccount('${chk.id}')" class="text-rose-500 hover:text-rose-700 font-semibold text-[11px] px-2 py-1 rounded hover:bg-rose-50" title="Xóa Checker">
+            <button onclick="openDeleteCheckerModal('${escapeHtml(chk.id)}')" class="text-rose-500 hover:text-rose-700 font-semibold text-[11px] px-2 py-1 rounded hover:bg-rose-50" title="Xóa Checker">
               <i class="fas fa-trash-alt"></i> Xóa
             </button>
           </div>
@@ -1295,57 +1517,104 @@
       });
     }
 
-    async function addNewChecker() {
-      const name = prompt('Nhập tên tài khoản Checker mới (ví dụ: Checker 4):');
-      if (!name || !name.trim()) return;
-      const pass = prompt('Nhập mật khẩu cho Checker này:', '123456');
-      if (!pass || !pass.trim()) return;
+    function openAddCheckerModal() {
+      openCustomDialog('Thêm Tài Khoản Checker Mới', `
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Tên tài khoản Checker *</label>
+          <input type="text" id="dlg-chk-name" placeholder="VD: Checker 4" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mật khẩu *</label>
+          <input type="text" id="dlg-chk-pass" value="123456" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
+          <button onclick="submitAddNewChecker()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg shadow">Lưu Checker</button>
+        </div>
+      `);
+    }
 
+    async function submitAddNewChecker() {
+      const name = (document.getElementById('dlg-chk-name')?.value || '').trim();
+      const pass = (document.getElementById('dlg-chk-pass')?.value || '').trim();
+      if (!name || !pass) {
+        showToast('Vui lòng nhập đầy đủ tên và mật khẩu!', true);
+        return;
+      }
       try {
         const newChecker = {
           id: 'chk_' + Date.now().toString().slice(-5),
-          name: name.trim(),
-          pass: pass.trim()
+          name,
+          pass
         };
         state.checkers.push(newChecker);
         await cloudSaveChecker(newChecker);
         renderCheckerSelectDropdown();
         renderCheckerAccountList();
+        closeCustomDialog();
         showToast(`Đã thêm mới Checker: ${name}`);
       } catch (err) {
         showToast('Lỗi thêm Checker: ' + err.message, true);
       }
     }
 
-    async function changeCheckerPassword(chkId) {
+    function openChangeCheckerPassModal(chkId) {
       const chk = state.checkers.find(c => c.id === chkId);
       if (!chk) return;
-      const newPass = prompt(`Nhập mật khẩu mới cho ${chk.name}:`, chk.pass);
-      if (!newPass || !newPass.trim()) return;
+      openCustomDialog(`Đổi Mật Khẩu — ${chk.name}`, `
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mật khẩu mới *</label>
+          <input type="text" id="dlg-chk-newpass" value="${escapeHtml(chk.pass)}" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
+          <button onclick="submitChangeCheckerPass('${escapeHtml(chk.id)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg shadow">Cập nhật</button>
+        </div>
+      `);
+    }
 
+    async function submitChangeCheckerPass(chkId) {
+      const chk = state.checkers.find(c => c.id === chkId);
+      const newPass = (document.getElementById('dlg-chk-newpass')?.value || '').trim();
+      if (!chk || !newPass) {
+        showToast('Vui lòng nhập mật khẩu mới!', true);
+        return;
+      }
       try {
-        chk.pass = newPass.trim();
+        chk.pass = newPass;
         await cloudSaveChecker(chk);
         renderCheckerAccountList();
+        closeCustomDialog();
         showToast(`Đã cập nhật mật khẩu cho ${chk.name}`);
       } catch (err) {
         showToast('Lỗi đổi mật khẩu: ' + err.message, true);
       }
     }
 
-    async function deleteCheckerAccount(chkId) {
+    function openDeleteCheckerModal(chkId) {
       const chk = state.checkers.find(c => c.id === chkId);
       if (!chk) return;
-      if (confirm(`Bạn có chắc muốn xóa tài khoản ${chk.name}?`)) {
-        try {
-          state.checkers = state.checkers.filter(c => c.id !== chkId);
-          await cloudDeleteChecker(chkId);
-          renderCheckerSelectDropdown();
-          renderCheckerAccountList();
-          showToast(`Đã xóa tài khoản ${chk.name}`);
-        } catch (err) {
-          showToast('Lỗi xóa Checker: ' + err.message, true);
-        }
+      openCustomDialog('Xác Nhận Xóa Tài Khoản', `
+        <p class="text-slate-600">Bạn có chắc muốn xóa tài khoản Checker <b>${escapeHtml(chk.name)}</b> không?</p>
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
+          <button onclick="confirmDeleteCheckerAccount('${escapeHtml(chk.id)}')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg shadow">Xóa Tài Khoản</button>
+        </div>
+      `);
+    }
+
+    async function confirmDeleteCheckerAccount(chkId) {
+      const chk = state.checkers.find(c => c.id === chkId);
+      if (!chk) return;
+      try {
+        state.checkers = state.checkers.filter(c => c.id !== chkId);
+        await cloudDeleteChecker(chkId);
+        renderCheckerSelectDropdown();
+        renderCheckerAccountList();
+        closeCustomDialog();
+        showToast(`Đã xóa tài khoản ${chk.name}`);
+      } catch (err) {
+        showToast('Lỗi xóa Checker: ' + err.message, true);
       }
     }
 
@@ -1385,8 +1654,8 @@
       const cmSelect = document.getElementById('cycle-select-month');
       const cySelect = document.getElementById('cycle-select-year');
       if (cmSelect && cySelect) {
-        state.checkerActiveMonth = parseInt(cmSelect.value);
-        state.checkerActiveYear = parseInt(cySelect.value);
+        state.checkerActiveMonth = parseInt(cmSelect.value, 10);
+        state.checkerActiveYear = parseInt(cySelect.value, 10);
       }
       const badge = document.getElementById('checker-current-cycle-badge');
       if (badge) {
@@ -1491,7 +1760,7 @@
       badgeContainer.innerHTML = `
         <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
           <span class="w-2 h-2 rounded-full ${state.currentUser.role === 'OWNER' ? 'bg-indigo-500' : state.currentUser.role === 'CHECKER' ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
-          <span class="text-xs font-bold text-slate-700">${state.currentUser.name}</span>
+          <span class="text-xs font-bold text-slate-700">${escapeHtml(state.currentUser.name)}</span>
           <button onclick="logout()" class="ml-2 text-rose-500 hover:text-rose-700 text-xs font-bold" title="Đăng xuất">
             <i class="fas fa-sign-out-alt"></i>
           </button>
@@ -1522,6 +1791,8 @@
 
       if (tabName === 'reports') {
         refreshReportDashboard();
+      } else if (tabName === 'qr') {
+        renderOwnerQRTable();
       }
     }
 
@@ -1558,28 +1829,29 @@
       filtered.forEach(dev => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 text-xs';
+        const safeCodeAttr = escapeHtml(dev.code).replace(/'/g, "\\'");
         tr.innerHTML = `
           <td class="py-3 px-3">
             <span class="px-2 py-1 rounded-md text-[11px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">
-              ${dev.type}
+              ${escapeHtml(dev.type)}
             </span>
           </td>
-          <td class="py-3 px-3 font-mono font-bold text-slate-800">${dev.code}</td>
-          <td class="py-3 px-3 font-semibold text-slate-700">${dev.workshop}</td>
-          <td class="py-3 px-3 text-slate-600">${dev.location}</td>
+          <td class="py-3 px-3 font-mono font-bold text-slate-800">${escapeHtml(dev.code)}</td>
+          <td class="py-3 px-3 font-semibold text-slate-700">${escapeHtml(dev.workshop)}</td>
+          <td class="py-3 px-3 text-slate-600">${escapeHtml(dev.location)}</td>
           <td class="py-3 px-3 text-center">
             <div class="flex items-center justify-center gap-2">
-              <button onclick="openEditDeviceModal('${dev.code}')" class="text-indigo-600 hover:text-indigo-800 font-bold p-1" title="Chỉnh sửa">
+              <button onclick="openEditDeviceModal('${safeCodeAttr}')" class="text-indigo-600 hover:text-indigo-800 font-bold p-1" title="Chỉnh sửa">
                 <i class="fas fa-edit"></i>
               </button>
-              <button onclick="deleteDevice('${dev.code}')" class="text-rose-500 hover:text-rose-700 font-bold p-1" title="Xóa thiết bị">
+              <button onclick="openDeleteDeviceModal('${safeCodeAttr}')" class="text-rose-500 hover:text-rose-700 font-bold p-1" title="Xóa thiết bị">
                 <i class="fas fa-trash-alt"></i>
               </button>
             </div>
           </td>
-          <td class="py-3 px-3 text-[11px] text-slate-500">${dev.history || 'Đã tạo'}</td>
+          <td class="py-3 px-3 text-[11px] text-slate-500">${escapeHtml(dev.history || 'Đã tạo')}</td>
           <td class="py-3 px-3 text-center">
-            <button onclick="openDeviceHistoryModal('${dev.code}')" class="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors inline-flex items-center justify-center" title="Xem lịch sử checksheet">
+            <button onclick="openDeviceHistoryModal('${safeCodeAttr}')" class="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors inline-flex items-center justify-center" title="Xem lịch sử checksheet">
               <i class="fas fa-eye text-sm"></i>
             </button>
           </td>
@@ -1598,10 +1870,10 @@
 
       devInfoEl.innerHTML = `
         <div class="flex items-center justify-between">
-          <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${dev.type}</span>
-          <span class="font-mono font-bold text-slate-800">${dev.code}</span>
+          <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${escapeHtml(dev.type)}</span>
+          <span class="font-mono font-bold text-slate-800">${escapeHtml(dev.code)}</span>
         </div>
-        <div class="text-[11px] text-slate-600 mt-1.5">${dev.workshop} • ${dev.location}</div>
+        <div class="text-[11px] text-slate-600 mt-1.5">${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}</div>
       `;
 
       const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
@@ -1615,16 +1887,16 @@
       } else {
         listEl.innerHTML = devInspections.map(ins => `
           <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'} flex gap-3 text-xs">
-            ${ins.photo ? `<a href="${ins.photo}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${ins.photo}" class="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
+            ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${escapeHtml(ins.photo)}" class="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
             <div class="space-y-1 flex-1">
               <div class="flex items-center justify-between">
                 <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1.5">
-                  <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Kết quả: ${ins.status}
+                  <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Kết quả: ${escapeHtml(ins.status)}
                 </span>
-                <span class="text-[10px] text-slate-400 font-mono">${ins.timestamp}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(ins.timestamp)}</span>
               </div>
-              <div class="text-slate-600">Người kiểm tra: <b>${ins.checkerName}</b></div>
-              ${ins.notes ? `<div class="text-slate-700 bg-white/80 p-2 rounded border border-slate-200/60 text-[11px]"><b>Ghi chú:</b> ${ins.notes}</div>` : ''}
+              <div class="text-slate-600">Người kiểm tra: <b>${escapeHtml(ins.checkerName)}</b></div>
+              ${ins.notes ? `<div class="text-slate-700 bg-white/80 p-2 rounded border border-slate-200/60 text-[11px]"><b>Ghi chú:</b> ${escapeHtml(ins.notes)}</div>` : ''}
             </div>
           </div>
         `).join('');
@@ -1649,7 +1921,7 @@
       document.getElementById('form-device-code').disabled = false;
       document.getElementById('form-device-workshop').value = 'Xưởng 1';
       document.getElementById('form-device-location').value = '';
-      
+
       const modal = document.getElementById('modal-device-form');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -1700,7 +1972,7 @@
             state.devices[idx].location = location;
             state.devices[idx].history = `Cập nhật bởi OWNER (${dateStr})`;
             await cloudSaveDevice(state.devices[idx]);
-            showToast('Đã lưu thay đổi thiết bị lên Supabase!');
+            showToast('Đã lưu thay đổi thiết bị!');
           }
         } else {
           const exists = state.devices.some(d => d.code.toLowerCase() === code.toLowerCase());
@@ -1729,21 +2001,34 @@
       }
     }
 
-    async function deleteDevice(code) {
-      if (confirm(`Bạn có chắc muốn xóa thiết bị ${code}?`)) {
-        try {
-          state.devices = state.devices.filter(d => d.code !== code);
-          await cloudDeleteDevice(code);
-          renderOwnerDeviceTable();
-          renderOwnerQRTable();
-          refreshReportDashboard();
-          showToast(`Đã xóa thiết bị ${code}`);
-        } catch (err) {
-          showToast('Lỗi xóa thiết bị: ' + err.message, true);
-        }
+    function openDeleteDeviceModal(code) {
+      const safeCodeAttr = escapeHtml(code).replace(/'/g, "\\'");
+      openCustomDialog('Xác Nhận Xóa Thiết Bị', `
+        <p class="text-slate-600">Bạn có chắc chắn muốn xóa thiết bị <b class="font-mono text-slate-900">${escapeHtml(code)}</b> khỏi hệ thống?</p>
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
+          <button onclick="confirmDeleteDevice('${safeCodeAttr}')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg shadow">Xóa Thiết Bị</button>
+        </div>
+      `);
+    }
+
+    async function confirmDeleteDevice(code) {
+      try {
+        state.devices = state.devices.filter(d => d.code !== code);
+        await cloudDeleteDevice(code);
+        closeCustomDialog();
+        renderOwnerDeviceTable();
+        renderOwnerQRTable();
+        refreshReportDashboard();
+        showToast(`Đã xóa thiết bị ${code}`);
+      } catch (err) {
+        showToast('Lỗi xóa thiết bị: ' + err.message, true);
       }
     }
 
+    /* ========================================================
+       QR MANAGEMENT: HIỂN THỊ, IN TEM A4 (CÁCH 1) & XUẤT XLSX
+       ======================================================== */
     function renderOwnerQRTable() {
       const container = document.getElementById('owner-qr-cards-grid');
       const countEl = document.getElementById('owner-qr-total-count');
@@ -1751,20 +2036,20 @@
       if (!container) return;
       container.innerHTML = '';
 
-      state.devices.forEach(dev => {
+      state.devices.forEach((dev, index) => {
         const card = document.createElement('div');
         card.className = 'bg-white p-3.5 rounded-2xl border border-slate-200/90 flex items-center justify-between gap-3 shadow-sm hover:shadow transition-all';
-        const qrId = 'qr_tag_' + dev.code.replace(/[^a-zA-Z0-9]/g, '_');
+        const qrId = 'qr_tag_' + index + '_' + dev.code.replace(/[^a-zA-Z0-9]/g, '_');
         card.innerHTML = `
           <div class="space-y-1 flex-1 min-w-0 pr-1">
             <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-sky-100 text-sky-700 border border-sky-200/60 leading-tight">
-              ${dev.type}
+              ${escapeHtml(dev.type)}
             </span>
             <div class="font-mono font-black text-slate-900 text-xs sm:text-[13px] leading-tight truncate mt-1">
-              ${dev.code}
+              ${escapeHtml(dev.code)}
             </div>
             <div class="text-[11px] text-slate-500 font-medium truncate">
-              ${dev.workshop} • ${dev.location}
+              ${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}
             </div>
           </div>
           <div id="${qrId}" class="w-16 h-16 shrink-0 bg-white p-1 rounded-xl border border-slate-300 flex items-center justify-center"></div>
@@ -1782,34 +2067,36 @@
               correctLevel: QRCode.CorrectLevel.M
             });
           }
-        }, 50);
+        }, 30);
       });
     }
 
-    function generateQRCodeDataUrl(text) {
+    function generateQRCodeDataUrl(text, size = 160) {
       return new Promise((resolve) => {
         const tempDiv = document.createElement('div');
-        tempDiv.style.display = 'none';
+        tempDiv.style.position = 'fixed';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
         document.body.appendChild(tempDiv);
         try {
           new QRCode(tempDiv, {
             text: text,
-            width: 90,
-            height: 90,
+            width: size,
+            height: size,
             correctLevel: QRCode.CorrectLevel.M
           });
           setTimeout(() => {
-            const img = tempDiv.querySelector('img');
             const canvas = tempDiv.querySelector('canvas');
+            const img = tempDiv.querySelector('img');
             let dataUrl = '';
-            if (img && img.src && img.src.startsWith('data:image')) {
-              dataUrl = img.src;
-            } else if (canvas) {
+            if (canvas) {
               dataUrl = canvas.toDataURL('image/png');
+            } else if (img && img.src && img.src.startsWith('data:image')) {
+              dataUrl = img.src;
             }
             document.body.removeChild(tempDiv);
             resolve(dataUrl);
-          }, 60);
+          }, 30);
         } catch (err) {
           if (tempDiv.parentNode) document.body.removeChild(tempDiv);
           resolve('');
@@ -1817,128 +2104,130 @@
       });
     }
 
-    async function exportDevicesToExcel() {
+    /**
+     * CÁCH 1: Mở khung xem trước & In trực tiếp / Xuất PDF chuẩn A4 Dọc
+     * Tự động chia đúng 12 mã tem QR trên mỗi trang A4 (3 cột × 4 hàng),
+     * mỗi ô gồm mã QR lớn chiếm 2/3 phía trên và 3 dòng thông tin ở 1/3 phía dưới.
+     */
+    async function openPrintQRLabelsModal() {
+      if (state.devices.length === 0) {
+        showToast('Chưa có thiết bị nào để in tem QR!', true);
+        return;
+      }
+
+      showToast('Đang căn chỉnh 12 mã / trang A4...');
+      const gridContainer = document.getElementById('qr-print-grid-container');
+      const countEl = document.getElementById('qr-print-count');
+      const pagesEl = document.getElementById('qr-print-pages');
+      const PAGE_SIZE = 12; // Cố định 12 tem / 1 trang A4 Dọc (3 cột × 4 hàng)
+      const totalPages = Math.ceil(state.devices.length / PAGE_SIZE);
+
+      if (countEl) countEl.textContent = state.devices.length;
+      if (pagesEl) pagesEl.textContent = totalPages;
+      if (gridContainer) gridContainer.innerHTML = '';
+
+      const qrDataUrls = [];
+      for (const dev of state.devices) {
+        qrDataUrls.push(await generateQRCodeDataUrl(dev.code, 240));
+      }
+
+      const pagesHtml = [];
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const start = pageIndex * PAGE_SIZE;
+        const pageDevices = state.devices.slice(start, start + PAGE_SIZE);
+
+        const cardsHtml = pageDevices.map((dev, idx) => {
+          const qrDataUrl = qrDataUrls[start + idx];
+          return `
+            <div class="qr-print-card">
+              <div class="qr-print-qr-zone">
+                <div class="qr-print-img-box">
+                  ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR ${escapeHtml(dev.code)}" />` : '<span style="font-size:10px;color:#94a3b8;">QR</span>'}
+                </div>
+              </div>
+              <div class="qr-print-info">
+                <div class="qr-print-type">${escapeHtml(dev.type)}</div>
+                <div class="qr-print-code">${escapeHtml(dev.code)}</div>
+                <div class="qr-print-loc">${escapeHtml(dev.workshop)} - ${escapeHtml(dev.location)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        pagesHtml.push(`
+          <div class="qr-a4-page-wrapper">
+            <div class="qr-page-label text-xs font-bold text-slate-600 mb-1.5 flex items-center justify-between px-1">
+              <span>Trang ${pageIndex + 1} / ${totalPages} (Khổ A4 Dọc — ${pageDevices.length}/12 tem)</span>
+              <span class="text-[11px] text-slate-400">QR chiếm 2/3 ô • Tự động ngắt trang khi in</span>
+            </div>
+            <div class="qr-a4-page">
+              ${cardsHtml}
+            </div>
+          </div>
+        `);
+      }
+
+      if (gridContainer) {
+        gridContainer.innerHTML = pagesHtml.join('');
+      }
+
+      const modal = document.getElementById('modal-qr-print-preview');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function closePrintQRLabelsModal() {
+      const modal = document.getElementById('modal-qr-print-preview');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    /**
+     * Xuất danh sách thiết bị ra file Excel chuẩn (.xlsx) bằng thư viện SheetJS
+     */
+    function exportDevicesListToExcelXlsx() {
       try {
         if (state.devices.length === 0) {
           showToast('Chưa có thiết bị nào để xuất file Excel!', true);
           return;
         }
-
-        showToast('Đang tạo mã QR và xuất file Excel, vui lòng đợi giây lát...');
-
-        const qrImages = {};
-        for (const dev of state.devices) {
-          qrImages[dev.code] = await generateQRCodeDataUrl(dev.code);
+        if (typeof XLSX === 'undefined') {
+          showToast('Thư viện SheetJS chưa tải xong, vui lòng thử lại!', true);
+          return;
         }
 
-        let excelHtml = `
-          <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-                xmlns:x="urn:schemas-microsoft-com:office:excel" 
-                xmlns="http://www.w3.org/TR/REC-html40">
-          <head>
-            <meta charset="utf-8">
-            <!--[if gte mso 9]>
-            <xml>
-              <x:ExcelWorkbook>
-                <x:ExcelWorksheets>
-                  <x:ExcelWorksheet>
-                    <x:Name>Tem_QR_Thiet_Bi</x:Name>
-                    <x:WorksheetOptions>
-                      <x:DisplayGridlines/>
-                      <x:Print>
-                        <x:ValidPrinterInfo/>
-                        <x:PaperSizeIndex>9</x:PaperSizeIndex>
-                        <x:Scale>100</x:Scale>
-                      </x:Print>
-                    </x:WorksheetOptions>
-                  </x:ExcelWorksheet>
-                </x:ExcelWorksheets>
-              </x:ExcelWorkbook>
-            </xml>
-            <![endif]-->
-            <style>
-              .device-tem-cell {
-                border: 1.5pt solid #cbd5e1;
-                background-color: #ffffff;
-                padding: 10px 14px;
-                vertical-align: middle;
-                font-family: Arial, "Segoe UI", sans-serif;
-                height: 100px;
-                min-width: 330px;
-                mso-style-parent: "";
-              }
-              .badge-text {
-                color: #0369a1;
-                font-weight: bold;
-                font-size: 11px;
-                display: inline-block;
-                margin-bottom: 4px;
-              }
-              .code-text {
-                font-size: 13px;
-                font-weight: 900;
-                color: #0f172a;
-                font-family: "Courier New", monospace;
-                margin-bottom: 4px;
-              }
-              .location-text {
-                font-size: 11px;
-                color: #64748b;
-                font-weight: 500;
-              }
-            </style>
-          </head>
-          <body>
-            <table cellspacing="8" cellpadding="0">
-        `;
+        const rows = state.devices.map((dev, idx) => ({
+          'STT': idx + 1,
+          'Loại thiết bị': dev.type,
+          'Mã thiết bị (QR)': dev.code,
+          'Xưởng': dev.workshop,
+          'Vị trí cụ thể': dev.location,
+          'Lịch sử cập nhật': dev.history || ''
+        }));
 
-        for (let i = 0; i < state.devices.length; i += 3) {
-          excelHtml += '<tr>';
-          for (let col = 0; col < 3; col++) {
-            const dev = state.devices[i + col];
-            if (dev) {
-              const qrSrc = qrImages[dev.code] || '';
-              excelHtml += `
-                <td class="device-tem-cell">
-                  <table cellpadding="0" cellspacing="0" style="width:100%; border:none;">
-                    <tr>
-                      <td style="vertical-align:middle; text-align:left; border:none; padding-right:12px;">
-                        <span class="badge-text">${dev.type}</span><br>
-                        <div class="code-text">${dev.code}</div>
-                        <div class="location-text">${dev.workshop} • ${dev.location}</div>
-                      </td>
-                      <td style="vertical-align:middle; text-align:right; border:none; width:80px;">
-                        ${qrSrc ? `<img src="${qrSrc}" width="76" height="76" alt="QR" style="border:1px solid #cbd5e1; border-radius:6px; display:block;" />` : ''}
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              `;
-            } else {
-              excelHtml += '<td style="border:none;"></td>';
-            }
-          }
-          excelHtml += '</tr>';
-        }
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [
+          { wch: 6 },
+          { wch: 26 },
+          { wch: 26 },
+          { wch: 12 },
+          { wch: 34 },
+          { wch: 28 }
+        ];
 
-        excelHtml += '</table></body></html>';
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Danh_Sach_PCCC');
 
-        const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const downloadLink = document.createElement('a');
-        const url = URL.createObjectURL(blob);
         const now = new Date();
         const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-
-        downloadLink.href = url;
-        downloadLink.download = `EHS_BOYD_EATON_Tem_QR_${dateStr}.xls`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(url);
-
-        showToast('Đã xuất file Excel kèm mã QR thành công!');
+        XLSX.writeFile(wb, `EHS_BOYD_EATON_DS_PCCC_${dateStr}.xlsx`);
+        showToast('Đã xuất danh sách thiết bị Excel (.xlsx) thành công!');
       } catch (err) {
-        showToast('Lỗi khi xuất file Excel: ' + err.message, true);
+        showToast('Lỗi xuất file Excel: ' + err.message, true);
       }
     }
 
@@ -1949,8 +2238,8 @@
       const mEl = document.getElementById('report-filter-month');
       const yEl = document.getElementById('report-filter-year');
       if (!mEl || !yEl) return;
-      const m = parseInt(mEl.value) || (new Date().getMonth() + 1);
-      const y = parseInt(yEl.value) || new Date().getFullYear();
+      const m = parseInt(mEl.value, 10) || (new Date().getMonth() + 1);
+      const y = parseInt(yEl.value, 10) || new Date().getFullYear();
       renderDashboardView('report-dashboard-container', m, y);
     }
 
@@ -1958,8 +2247,8 @@
       const mEl = document.getElementById('guest-filter-month');
       const yEl = document.getElementById('guest-filter-year');
       if (!mEl || !yEl) return;
-      const m = parseInt(mEl.value) || (new Date().getMonth() + 1);
-      const y = parseInt(yEl.value) || new Date().getFullYear();
+      const m = parseInt(mEl.value, 10) || (new Date().getMonth() + 1);
+      const y = parseInt(yEl.value, 10) || new Date().getFullYear();
       renderDashboardView('guest-total-dashboard-container', m, y);
     }
 
@@ -1977,7 +2266,7 @@
       ];
 
       const cycleInspections = state.inspections.filter(i => {
-        return parseInt(i.month) === targetMonth && parseInt(i.year) === targetYear;
+        return parseInt(i.month, 10) === targetMonth && parseInt(i.year, 10) === targetYear;
       });
 
       const latestInsMap = {};
@@ -2039,7 +2328,6 @@
       });
 
       const overallPct = totalAll > 0 ? ((totalOK / totalAll) * 100).toFixed(1) : '0.0';
-
       const radius = 54;
       const circ = 2 * Math.PI * radius;
       const strokeDashoffset = circ - (circ * parseFloat(overallPct)) / 100;
@@ -2079,7 +2367,7 @@
                 <div class="flex items-center gap-3 text-[10px] font-bold">
                   <span class="text-emerald-600 flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500"></span> Đạt (OK)</span>
                   <span class="text-rose-600 flex items-center gap-1"><span class="w-2 h-2 rounded bg-rose-500"></span> Lỗi (NG)</span>
-                  <span class="text-amber-500 flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-400"></span> Need Check / Quá hạn</span>
+                  <span class="text-amber-500 flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-400"></span> Need Check</span>
                 </div>
               </div>
 
@@ -2087,7 +2375,7 @@
                 ${catStats.map(c => `
                   <div class="space-y-1">
                     <div class="flex items-center justify-between text-xs">
-                      <span class="font-bold text-slate-700">${c.label}</span>
+                      <span class="font-bold text-slate-700">${escapeHtml(c.label)}</span>
                       <span class="text-slate-400 text-[11px] font-medium">${c.ok}/${c.total} thiết bị (${c.pctOK}%)</span>
                     </div>
                     <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
@@ -2105,7 +2393,7 @@
             ${catStats.map(c => `
               <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-3">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-black text-slate-800 uppercase tracking-tight">${c.label}</span>
+                  <span class="text-xs font-black text-slate-800 uppercase tracking-tight">${escapeHtml(c.label)}</span>
                   <span class="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200">${c.total} thiết bị</span>
                 </div>
                 <div class="text-[10px] text-slate-400 font-medium">Chu kỳ: Tháng ${targetMonth}/${targetYear}</div>
@@ -2143,7 +2431,7 @@
 
       const checkedDeviceCodes = new Set(
         state.inspections
-          .filter(i => parseInt(i.month) === activeMonth && parseInt(i.year) === activeYear)
+          .filter(i => parseInt(i.month, 10) === activeMonth && parseInt(i.year, 10) === activeYear)
           .map(i => i.deviceCode.toLowerCase())
       );
 
@@ -2163,18 +2451,21 @@
         return;
       }
 
-      container.innerHTML = pendingDevices.map(d => `
-        <div onclick="openCheckerViewModal('${d.code}')" class="p-3 bg-white border border-slate-200 hover:border-indigo-400 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs shadow-sm hover:shadow">
-          <div>
-            <div class="font-bold text-slate-800 font-mono flex items-center gap-1.5">
-              ${d.code}
-              <i class="fas fa-info-circle text-slate-400 text-[11px]" title="Bấm xem vị trí"></i>
+      container.innerHTML = pendingDevices.map(d => {
+        const safeCodeAttr = escapeHtml(d.code).replace(/'/g, "\\'");
+        return `
+          <div onclick="openCheckerViewModal('${safeCodeAttr}')" class="p-3 bg-white border border-slate-200 hover:border-indigo-400 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs shadow-sm hover:shadow">
+            <div>
+              <div class="font-bold text-slate-800 font-mono flex items-center gap-1.5">
+                ${escapeHtml(d.code)}
+                <i class="fas fa-info-circle text-slate-400 text-[11px]" title="Bấm xem vị trí"></i>
+              </div>
+              <div class="text-[10px] text-slate-500">${escapeHtml(d.workshop)} • ${escapeHtml(d.location)}</div>
             </div>
-            <div class="text-[10px] text-slate-500">${d.workshop} • ${d.location}</div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getDeviceTypeBadgeClass(d.type)}">${escapeHtml(d.type)}</span>
           </div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getDeviceTypeBadgeClass(d.type)}">${d.type}</span>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function openCheckerViewModal(code) {
@@ -2237,8 +2528,8 @@
         (decodedText) => {
           onQRCodeScanned(decodedText);
         },
-        (errorMessage) => {}
-      ).catch(err => {
+        () => {}
+      ).catch(() => {
         const container = document.getElementById(qrRegionId);
         if (container) {
           container.innerHTML = `
@@ -2261,7 +2552,7 @@
     function onQRCodeScanned(decodedText) {
       toggleQRScannerModal(false);
       const code = decodedText.trim();
-      
+
       if (state.activeScannerTarget === 'checker') {
         openChecksheetForDevice(code);
       } else {
@@ -2362,7 +2653,7 @@
         div.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs';
         div.innerHTML = `
           <div class="font-medium text-slate-800 flex-1">
-            ${itemText} <span class="text-rose-500 font-bold">*</span>
+            ${escapeHtml(itemText)} <span class="text-rose-500 font-bold">*</span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-emerald-50">
@@ -2434,7 +2725,7 @@
           const video = document.getElementById('webcam-video');
           if (video) video.srcObject = stream;
         })
-        .catch(err => {
+        .catch(() => {
           showToast('Không thể bật WebCam. Vui lòng cấp quyền!', true);
           closeWebcamModal();
         });
@@ -2477,6 +2768,7 @@
       if (previewImg && previewWrapper && promptBtn) {
         previewImg.src = dataUrl;
         previewWrapper.classList.remove('hidden');
+        previewWrapper.classList.add('flex');
         promptBtn.classList.add('hidden');
       }
     }
@@ -2487,7 +2779,10 @@
       const promptBtn = document.getElementById('camera-prompt-btn');
       const mobileInput = document.getElementById('camera-file-input');
 
-      if (previewWrapper) previewWrapper.classList.add('hidden');
+      if (previewWrapper) {
+        previewWrapper.classList.add('hidden');
+        previewWrapper.classList.remove('flex');
+      }
       if (promptBtn) promptBtn.classList.remove('hidden');
       if (mobileInput) mobileInput.value = '';
     }
@@ -2511,7 +2806,7 @@
       for (let i = 0; i < radioGroups.length; i++) {
         const checkedRadio = document.querySelector(`input[name="check_item_${i}"]:checked`);
         if (!checkedRadio) {
-          showToast(`Vui lòng hoàn thành tất cả các mục kiểm tra (*)`, true);
+          showToast('Vui lòng hoàn thành tất cả các mục kiểm tra (*)', true);
           return;
         }
         const itemLabel = radioGroups[i].querySelector('.font-medium').innerText.replace('*', '').trim();
@@ -2596,7 +2891,7 @@
       if (!dev && devInspections.length === 0) {
         container.innerHTML = `
           <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-            Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${code}</b>
+            Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${escapeHtml(code)}</b>
           </div>
         `;
         return;
@@ -2607,10 +2902,10 @@
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">
-                ${dev ? dev.type : 'Thiết bị PCCC'}
+                ${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}
               </span>
-              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${code}</h4>
-              <p class="text-xs text-slate-500">${dev ? `${dev.workshop} • ${dev.location}` : 'Chưa có thông tin vị trí'}</p>
+              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(code)}</h4>
+              <p class="text-xs text-slate-500">${dev ? `${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}` : 'Chưa có thông tin vị trí'}</p>
             </div>
             <span class="text-xs font-bold text-slate-400">Đã kiểm tra: ${devInspections.length} lần</span>
           </div>
@@ -2620,16 +2915,16 @@
             ${devInspections.length === 0 ? '<div class="text-xs text-slate-400 italic">Chưa có lượt checksheet nào trong hệ thống.</div>' : ''}
             ${devInspections.map(ins => `
               <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'} flex flex-col sm:flex-row gap-3 text-xs">
-                ${ins.photo ? `<a href="${ins.photo}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${ins.photo}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
+                ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${escapeHtml(ins.photo)}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
                 <div class="space-y-1 flex-1">
                   <div class="flex items-center justify-between">
                     <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} text-xs flex items-center gap-1.5">
-                      <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Trạng thái: ${ins.status}
+                      <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Trạng thái: ${escapeHtml(ins.status)}
                     </span>
-                    <span class="text-[11px] text-slate-400 font-mono">${ins.timestamp}</span>
+                    <span class="text-[11px] text-slate-400 font-mono">${escapeHtml(ins.timestamp)}</span>
                   </div>
-                  <div class="text-slate-600">Người kiểm tra: <b>${ins.checkerName}</b></div>
-                  ${ins.notes ? `<div class="text-slate-700 bg-white/70 p-2 rounded border border-slate-200/50 text-[11px]"><b>Ghi chú:</b> ${ins.notes}</div>` : ''}
+                  <div class="text-slate-600">Người kiểm tra: <b>${escapeHtml(ins.checkerName)}</b></div>
+                  ${ins.notes ? `<div class="text-slate-700 bg-white/70 p-2 rounded border border-slate-200/50 text-[11px]"><b>Ghi chú:</b> ${escapeHtml(ins.notes)}</div>` : ''}
                 </div>
               </div>
             `).join('')}
