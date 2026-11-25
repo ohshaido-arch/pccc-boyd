@@ -12,8 +12,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- HTML5-QRCode Scanner Library -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- SheetJS for Excel Export -->
+  <!-- SheetJS for Excel Export (.xlsx) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- JSZip for Photo Backup (.zip) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -25,178 +27,146 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* ================= STYLE CHO KHUNG IN TEM QR CHUẨN 12 MÃ / 1 TRANG A4 DỌC (QR 2/3 Ô) ================= */
-    .qr-a4-page-wrapper {
-      margin: 0 auto 20px auto;
-      max-width: 194mm;
-    }
+    /* ================= PRINT A4 PORTRAIT: 12 TEM QR / TRANG (3 CỘT x 4 HÀNG, QR CHIẾM 2/3 Ô) ================= */
     .qr-a4-page {
-      width: 100%;
-      aspect-ratio: 194 / 279;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-rows: repeat(4, minmax(0, 1fr));
-      gap: 4mm;
+      width: 210mm;
+      height: 287mm;
+      margin: 0 auto 16px auto;
+      padding: 6mm;
       background: #ffffff;
-      padding: 4mm;
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.16);
+      border-radius: 6px;
       box-sizing: border-box;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 4mm;
     }
+
     .qr-print-card {
+      border: 1.5px solid #334155;
+      border-radius: 6px;
+      padding: 3mm 2.5mm;
+      background: #ffffff;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      border: 1.5px solid #94a3b8;
-      border-radius: 8px;
-      padding: 2.5mm 2.5mm 2mm 2.5mm;
-      background: #ffffff;
-      height: 100%;
-      min-height: 0;
+      text-align: center;
       overflow: hidden;
       box-sizing: border-box;
-      text-align: center;
-      break-inside: avoid;
-      page-break-inside: avoid;
     }
-    /* Vùng QR chiếm 2/3 chiều cao ô tem */
-    .qr-print-qr-zone {
+
+    .qr-print-card-empty {
+      border: 1px dashed transparent;
+      background: transparent;
+    }
+
+    .qr-print-top {
+      flex: 2 1 0%;
       width: 100%;
-      height: 66%;
       display: flex;
       align-items: center;
       justify-content: center;
+      min-height: 0;
       padding-bottom: 1.5mm;
-      box-sizing: border-box;
     }
-    .qr-print-img-box {
+
+    .qr-print-top img {
       height: 100%;
-      max-width: 100%;
+      max-height: 39mm;
+      max-width: 39mm;
       aspect-ratio: 1 / 1;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      padding: 1.5mm;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-    .qr-print-img-box img {
-      width: 100%;
-      height: 100%;
       object-fit: contain;
       display: block;
       image-rendering: pixelated;
     }
-    /* Vùng thông tin chiếm 1/3 phía dưới ô tem */
-    .qr-print-info {
+
+    .qr-print-bottom {
+      flex: 1 1 0%;
       width: 100%;
-      height: 34%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
-      overflow: hidden;
+      gap: 1mm;
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 1.5mm;
+      min-height: 0;
     }
+
     .qr-print-type {
-      width: 100%;
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #0369a1;
+      text-transform: uppercase;
       line-height: 1.15;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .qr-print-code {
-      width: 100%;
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-      font-size: 11.5px;
-      font-weight: 900;
-      color: #0f172a;
-      line-height: 1.15;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .qr-print-loc {
-      width: 100%;
-      font-size: 9px;
-      font-weight: 600;
-      color: #475569;
-      line-height: 1.2;
+      max-width: 100%;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
+    .qr-print-code {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 10.5px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.15;
+      word-break: break-all;
+    }
+
+    .qr-print-loc {
+      font-size: 8.5px;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.2;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
     @media print {
       @page {
         size: A4 portrait;
-        margin: 8mm;
+        margin: 5mm;
       }
-      html, body {
+      body {
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      .no-print,
-      .qr-page-label {
+      .no-print {
         display: none !important;
       }
-      #modal-qr-print-preview {
+      #modal-print-qr {
         position: static !important;
-        inset: auto !important;
+        display: block !important;
         background: #ffffff !important;
         padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
         overflow: visible !important;
       }
-      #qr-print-sheet-wrapper {
-        max-width: none !important;
-        width: 100% !important;
+      #print-qr-scroll-area {
+        padding: 0 !important;
+        overflow: visible !important;
         max-height: none !important;
+      }
+      .qr-a4-page {
+        width: 200mm !important;
+        height: 285mm !important;
+        margin: 0 auto !important;
+        padding: 3mm !important;
         box-shadow: none !important;
-        border: none !important;
         border-radius: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
-      }
-      #qr-print-toolbar {
-        display: none !important;
-      }
-      #qr-print-body {
-        max-height: none !important;
-        overflow: visible !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        background: #ffffff !important;
-      }
-      .qr-a4-page-wrapper {
-        margin: 0 !important;
-        max-width: none !important;
         page-break-after: always !important;
         break-after: page !important;
       }
-      .qr-a4-page-wrapper:last-child {
+      .qr-a4-page:last-child {
         page-break-after: auto !important;
         break-after: auto !important;
-      }
-      .qr-a4-page {
-        width: 100% !important;
-        height: 279mm !important;
-        aspect-ratio: auto !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        gap: 4mm !important;
       }
     }
   </style>
@@ -223,17 +193,17 @@
         </div>
       </div>
 
-      <!-- User Session & Navigation Status -->
+      <!-- User Session & Cloud Status -->
       <div class="flex items-center gap-2">
         <div id="cloud-sync-badge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span> Chế độ Offline (Local)
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span> Đang khởi tạo...
         </div>
         <div id="nav-user-badge" class="flex items-center gap-2"></div>
       </div>
     </div>
   </header>
 
-  <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+  <!-- ================= TOAST NOTIFICATION ================= -->
   <div id="toast" class="no-print fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold hidden transition-all duration-300">
     <i class="fas fa-bell"></i>
     <span id="toast-msg">Thông báo hệ thống</span>
@@ -242,11 +212,9 @@
   <!-- ================= MAIN APPLICATION CONTAINER ================= -->
   <main class="no-print flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
-    <!-- ================= VIEW 1: AUTHENTICATION / PORTAL (CLIENT 1) ================= -->
+    <!-- ================= VIEW 1: LOGIN PORTAL ================= -->
     <section id="section-login" class="max-w-md mx-auto py-8 sm:py-12">
       <div class="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-8 space-y-6">
-        
-        <!-- BOYD THERMAL by EATON Logo in Login -->
         <div class="text-center space-y-2">
           <div class="inline-flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-inner mb-1 select-none">
             <span class="text-2xl font-black text-slate-950 tracking-tighter leading-none">BOYD</span>
@@ -260,7 +228,7 @@
           <p class="text-xs text-slate-500">Hệ thống IoT kiểm tra định kỳ thiết bị PCCC</p>
         </div>
 
-        <!-- Role Select Tabs: OWNER vs CHECKER -->
+        <!-- Role Select Tabs -->
         <div class="flex bg-slate-100 p-1 rounded-xl">
           <button id="tab-btn-owner" onclick="switchLoginTab('owner')" class="flex-1 py-2 rounded-lg font-bold text-xs bg-white text-slate-800 shadow-sm transition-all">
             <i class="fas fa-user-tie mr-1.5 text-indigo-600"></i> OWNER
@@ -299,11 +267,7 @@
         <form id="form-login-checker" onsubmit="event.preventDefault(); handleLoginChecker();" class="space-y-4 hidden">
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Chọn tài khoản Kiểm tra (Checker)</label>
-            <div class="relative">
-              <select id="login-checker-select" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
-                <!-- Injected via JS -->
-              </select>
-            </div>
+            <select id="login-checker-select" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"></select>
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu Checker</label>
@@ -319,14 +283,12 @@
           </button>
         </form>
 
-        <!-- Separator -->
         <div class="relative flex py-1 items-center">
           <div class="flex-grow border-t border-slate-200"></div>
           <span class="flex-shrink mx-3 text-slate-400 text-[11px] font-bold uppercase">Hoặc</span>
           <div class="flex-grow border-t border-slate-200"></div>
         </div>
 
-        <!-- AUDITOR / GUEST Access Button -->
         <div>
           <button onclick="handleLoginGuest()" class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2">
             <i class="fas fa-clipboard-user text-amber-500"></i> Truy Cập Dành Cho AUDITOR / GUEST
@@ -338,7 +300,6 @@
 
     <!-- ================= VIEW 2: OWNER WORKSPACE ================= -->
     <section id="section-owner" class="space-y-6 hidden">
-      <!-- OWNER Sub-navigation -->
       <div class="bg-white p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
@@ -352,10 +313,13 @@
             <i class="fas fa-qrcode mr-1.5"></i> Bảng Quản lý QR
           </button>
           <button id="owner-subtab-reports" onclick="switchOwnerSubTab('reports')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all">
-            <i class="fas fa-chart-pie mr-1.5"></i> Báo Cáo & Lịch Sử
+            <i class="fas fa-chart-pie mr-1.5"></i> Báo Cáo &amp; Lịch Sử
           </button>
           <button id="owner-subtab-accounts" onclick="switchOwnerSubTab('accounts')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all">
             <i class="fas fa-users-gear mr-1.5"></i> Cấp Quyền Checker
+          </button>
+          <button onclick="openStorageManagerModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all flex items-center gap-1.5" title="Xem % dung lượng lưu trữ Supabase và dọn ảnh cũ">
+            <i class="fas fa-hard-drive"></i> Quản lý lưu trữ
           </button>
           <button onclick="openChangePasswordModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all flex items-center gap-1.5">
             <i class="fas fa-key"></i> Đổi pass OWNER
@@ -369,12 +333,6 @@
           <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <select id="owner-filter-type" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
               <option value="">Tất cả loại thiết bị</option>
-              <option value="Bình bột ABC">Bình bột ABC</option>
-              <option value="Bình khí CO2">Bình khí CO2</option>
-              <option value="Họng chữa cháy">Họng chữa cháy</option>
-              <option value="Chuông/ đèn/ còi báo cháy">Chuông/ đèn/ còi báo cháy</option>
-              <option value="Tủ báo cháy">Tủ báo cháy</option>
-              <option value="Quạt hút khói">Quạt hút khói</option>
             </select>
 
             <select id="owner-filter-workshop" onchange="renderOwnerDeviceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
@@ -388,9 +346,15 @@
             <input type="text" id="owner-search-code" oninput="renderOwnerDeviceTable()" placeholder="Tìm theo mã hoặc vị trí..." class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500">
           </div>
 
-          <button onclick="openAddDeviceModal()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2">
-            <i class="fas fa-plus-circle"></i> Thêm Thiết Bị PCCC
-          </button>
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <button onclick="openDeviceConfigModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5" title="Set-up mẫu Checksheet &amp; Thêm loại thiết bị">
+              <i class="fas fa-cog text-indigo-600 text-sm"></i>
+              <span class="hidden sm:inline">Set-up Checksheet</span>
+            </button>
+            <button onclick="openAddDeviceModal()" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2">
+              <i class="fas fa-plus-circle"></i> Thêm Thiết Bị PCCC
+            </button>
+          </div>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -407,50 +371,43 @@
                   <th class="py-3 px-3 text-center">Xem checksheet</th>
                 </tr>
               </thead>
-              <tbody id="owner-device-table-body" class="divide-y divide-slate-100">
-                <!-- Rendered dynamically -->
-              </tbody>
+              <tbody id="owner-device-table-body" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Tab 2: QR Management (In Tem QR / Xuất PDF chuẩn A4 & Xuất DS Excel chuẩn .xlsx) -->
+      <!-- Tab 2: QR Management -->
       <div id="owner-view-qr" class="space-y-4 hidden">
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý Danh Sách & Mã Tem QR</h3>
-            <p class="text-[11px] text-slate-500">Mã QR tự động tạo theo mã định danh của từng thiết bị trong nhà máy</p>
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý Danh Sách &amp; In Mã Tem QR</h3>
+            <p class="text-[11px] text-slate-500">Tự động căn chuẩn 12 mã / 1 trang A4 Dọc (3 cột × 4 hàng, QR lớn chiếm 2/3 ô)</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <!-- Nút In Tem QR / Xuất PDF chuẩn A4 (Khắc phục triệt để lỗi dấu X đỏ của Excel) -->
             <button onclick="openPrintQRLabelsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
-              <i class="fas fa-print text-indigo-200 text-sm"></i> In Tem QR / Xuất PDF (Chuẩn A4)
+              <i class="fas fa-print text-indigo-200 text-sm"></i> In Tem QR / Xuất PDF (12 mã/A4)
             </button>
-            <!-- Nút Xuất danh sách Excel chuẩn (.xlsx bằng SheetJS) -->
-            <button onclick="exportDevicesListToExcelXlsx()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
+            <button onclick="exportDevicesListToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
               <i class="fas fa-file-excel text-emerald-200 text-sm"></i> Xuất DS Excel (.xlsx)
             </button>
           </div>
         </div>
 
-        <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl text-slate-700 text-xs flex items-center justify-between flex-wrap gap-2">
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <i class="fas fa-qrcode text-indigo-600"></i>
-            <span>Bấm <b>In Tem QR / Xuất PDF (Chuẩn A4)</b> để tự động căn chuẩn <b>12 mã / 1 trang A4 Dọc</b> (mã QR lớn chiếm 2/3 ô, thông tin 1/3 phía dưới).</span>
+            <span>Dùng nút <b>In Tem QR / Xuất PDF</b> để in trực tiếp hoặc lưu PDF chuẩn A4 không bị lỗi dấu X đỏ.</span>
           </div>
           <span class="font-bold text-[11px] bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
             Tổng cộng: <span id="owner-qr-total-count" class="text-emerald-600 font-mono">0</span> thiết bị
           </span>
         </div>
 
-        <!-- QR Cards Grid hiển thị trên web -->
-        <div id="owner-qr-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <!-- Injected via JS -->
-        </div>
+        <div id="owner-qr-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
       </div>
 
-      <!-- Tab 3: Reports & Inspection Stats -->
+      <!-- Tab 3: Reports -->
       <div id="owner-view-reports" class="space-y-4 hidden">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-2">
@@ -458,26 +415,26 @@
             <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Lọc Báo Cáo Theo Chu Kỳ Kiểm Tra:</span>
           </div>
           <div class="flex items-center gap-2">
-            <select id="report-filter-month" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
-            </select>
-            <select id="report-filter-year" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
-            </select>
+            <select id="report-filter-month" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500"></select>
+            <select id="report-filter-year" onchange="refreshReportDashboard()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500"></select>
           </div>
         </div>
-
         <div id="report-dashboard-container"></div>
       </div>
 
-      <!-- Tab 4: Checker Accounts Management -->
+      <!-- Tab 4: Checker Accounts -->
       <div id="owner-view-accounts" class="space-y-4 hidden">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 max-w-xl">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý & Cấp Mới Tài Khoản CHECKER</h4>
-              <p class="text-[11px] text-slate-400">Các tài khoản nhân viên kiểm tra hiện trường</p>
-            </div>
-            <button onclick="openAddCheckerModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow flex items-center gap-1.5">
-              <i class="fas fa-user-plus"></i> Thêm Checker
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 max-w-2xl">
+          <div class="pb-3 border-b border-slate-100">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quản Lý &amp; Cấp Mới Tài Khoản CHECKER</h4>
+            <p class="text-[11px] text-slate-400">Các tài khoản nhân viên kiểm tra hiện trường</p>
+          </div>
+          <!-- Form thêm nhanh Checker -->
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl">
+            <input type="text" id="new-checker-name" placeholder="Tên Checker mới (VD: Checker 1)" class="sm:col-span-5 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+            <input type="text" id="new-checker-pass" placeholder="Mật khẩu (VD: 123456)" value="123456" class="sm:col-span-4 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+            <button onclick="addNewChecker()" class="sm:col-span-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow flex items-center justify-center gap-1.5">
+              <i class="fas fa-user-plus"></i> Thêm mới
             </button>
           </div>
           <div id="owner-checker-list" class="space-y-2"></div>
@@ -504,6 +461,7 @@
         </button>
       </div>
 
+      <!-- Pending Devices List -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
@@ -527,14 +485,12 @@
         <div id="checker-pending-devices-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1"></div>
       </div>
 
-      <!-- ACTIVE CHECKSHEET FORM -->
+      <!-- Active Checksheet Form -->
       <div id="checksheet-form-card" class="bg-white rounded-3xl border-2 border-emerald-500/80 shadow-2xl p-5 sm:p-7 space-y-6 hidden">
         <div class="flex items-start justify-between border-b border-slate-100 pb-4">
           <div>
             <div class="flex items-center gap-2">
-              <span id="cs-device-type-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800">
-                Bình bột ABC
-              </span>
+              <span id="cs-device-type-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800">Bình bột ABC</span>
               <span id="cs-device-id" class="font-mono text-sm sm:text-base font-black text-slate-900">ABC-001</span>
             </div>
             <div id="cs-device-location" class="text-xs text-slate-500 font-medium mt-1">Xưởng 1 - Cột D3 Tầng 2</div>
@@ -557,7 +513,7 @@
           <label class="block text-xs font-bold text-slate-800">
             Chụp Ảnh Hiện Trường <span class="text-rose-500 font-bold">* (Bắt Buộc)</span>
           </label>
-          <p class="text-[11px] text-slate-400 italic">Hệ thống kích hoạt camera trực tiếp, ngăn chặn chọn ảnh cũ từ bộ sưu tập để đảm bảo tính khách quan.</p>
+          <p class="text-[11px] text-slate-400 italic">Hệ thống tự động nén tối ưu (640px, ~55KB) để tiết kiệm dung lượng Supabase Cloud.</p>
 
           <div class="flex flex-col sm:flex-row items-center gap-3">
             <button type="button" id="camera-prompt-btn" onclick="triggerCameraCapture()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl text-xs shadow flex items-center justify-center gap-2">
@@ -591,7 +547,7 @@
             Hủy Bỏ
           </button>
           <button type="button" id="btn-submit-checksheet" onclick="submitChecksheet()" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-lg transition-all flex items-center gap-2">
-            <i class="fas fa-paper-plane"></i> Hoàn Thành & Gửi Checksheet
+            <i class="fas fa-paper-plane"></i> Hoàn Thành &amp; Gửi Checksheet
           </button>
         </div>
       </div>
@@ -602,7 +558,7 @@
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu & Báo Cáo Tổng Hợp (TOTAL)</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu &amp; Báo Cáo Tổng Hợp (TOTAL)</span>
         </div>
         <button onclick="toggleQRScannerModal(true, 'guest')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
           <i class="fas fa-qrcode"></i> Quét QR Tra Cứu Thiết Bị
@@ -610,7 +566,7 @@
       </div>
 
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
-        <input type="text" id="guest-input-code" placeholder="Nhập mã thiết bị (ví dụ: ABC-AGM-GF2-D/03-0004)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500">
+        <input type="text" id="guest-input-code" placeholder="Nhập mã thiết bị (ví dụ: B1-FF-2F-001)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500">
         <button onclick="searchGuestDeviceHistory()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs">
           Tìm Kiếm
         </button>
@@ -636,37 +592,115 @@
 
   </main>
 
-  <!-- ================= MODAL: XEM TRƯỚC & IN TEM QR CHUẨN A4 DỌC ================= -->
-  <div id="modal-qr-print-preview" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-5">
-    <div id="qr-print-sheet-wrapper" class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
-      <div id="qr-print-toolbar" class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between flex-wrap gap-3 shrink-0">
-        <div>
-          <h3 class="text-sm font-extrabold flex items-center gap-2">
-            <i class="fas fa-print text-emerald-400"></i> Xem Trước In Tem QR PCCC (12 mã / trang A4 Dọc — QR lớn 2/3 ô)
-          </h3>
-          <p class="text-[11px] text-slate-300 mt-0.5">
-            Tổng số tem: <b id="qr-print-count" class="text-emerald-300">0</b> • Tổng số trang A4: <b id="qr-print-pages" class="text-amber-300">0</b> • Chọn <b>In ngay</b> hoặc <b>Save as PDF</b>
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-1.5 transition">
-            <i class="fas fa-print"></i> In Ngay / Lưu PDF
-          </button>
-          <button onclick="closePrintQRLabelsModal()" class="bg-white/10 hover:bg-white/20 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition">
-            <i class="fas fa-times"></i> Đóng
-          </button>
-        </div>
+  <!-- ================= MODAL: IN TEM QR / XUẤT PDF (12 MÃ / A4 DỌC) ================= -->
+  <div id="modal-print-qr" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex-col">
+    <div class="no-print bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between border-b border-slate-700 shrink-0">
+      <div>
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-qrcode text-emerald-400"></i> Xem Trước In Tem QR Chuẩn A4 Dọc (12 mã / trang)
+        </h3>
+        <p id="print-qr-subtitle" class="text-[11px] text-slate-300">Đang tạo mã QR sắc nét...</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2">
+          <i class="fas fa-print"></i> In Ngay / Lưu PDF
+        </button>
+        <button onclick="closePrintQRLabelsModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs">
+          Đóng
+        </button>
+      </div>
+    </div>
+    <div id="print-qr-scroll-area" class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-200/90">
+      <div id="print-qr-pages-container"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: QUẢN LÝ LƯU TRỮ (% DUNG LƯỢNG & DỌN ẢNH CŨ) ================= -->
+  <div id="modal-cleanup-photos" class="no-print fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between shrink-0">
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-hard-drive text-emerald-400"></i> Quản Lý Lưu Trữ Supabase &amp; Dọn Ảnh Cũ
+        </h3>
+        <button onclick="closeCleanupPhotosModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
       </div>
 
-      <div id="qr-print-body" class="p-4 sm:p-5 overflow-y-auto bg-slate-200 flex-1">
-        <div id="qr-print-grid-container" class="space-y-5">
-          <!-- Các trang A4 (mỗi trang đúng 12 tem QR) được render tự động tại đây -->
+      <div class="p-5 space-y-4 text-xs overflow-y-auto">
+        <div id="storage-usage-overview" class="space-y-3"></div>
+
+        <hr class="border-slate-200">
+
+        <div class="space-y-3">
+          <div class="font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+            <i class="fas fa-broom text-rose-500"></i> Giải phóng dung lượng Ảnh theo Tháng / Năm
+          </div>
+
+          <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 leading-relaxed">
+            <i class="fas fa-shield-halved text-emerald-600 mr-1"></i>
+            Chỉ xóa <b>file ảnh chụp</b> trên Supabase Storage. Toàn bộ <b>lịch sử kiểm tra (OK/NG, checklist, ghi chú)</b> trong Database vẫn được giữ nguyên 100%.
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Chọn Tháng:</label>
+              <select id="cleanup-select-month" onchange="updateCleanupPhotosPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-rose-500"></select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Chọn Năm:</label>
+              <select id="cleanup-select-year" onchange="updateCleanupPhotosPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-rose-500"></select>
+            </div>
+          </div>
+
+          <div id="cleanup-preview-box" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1"></div>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 cursor-pointer">
+            <input type="checkbox" id="cleanup-download-zip" checked class="mt-0.5 w-4 h-4 accent-indigo-600 rounded">
+            <span class="text-indigo-900 font-semibold leading-snug">
+              Tự động nén &amp; tải toàn bộ ảnh của tháng này thành file <b>.ZIP</b> về máy tính trước khi xóa trên Cloud (Khuyên dùng)
+            </span>
+          </label>
+
+          <div id="cleanup-progress-bar" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-semibold flex items-center gap-2">
+            <i class="fas fa-spinner fa-spin text-amber-600"></i>
+            <span id="cleanup-progress-text">Đang xử lý...</span>
+          </div>
+
+          <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+            <button type="button" onclick="closeCleanupPhotosModal()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700">Đóng</button>
+            <button type="button" id="btn-execute-cleanup" onclick="executeCleanupOldPhotos()" class="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-xl shadow flex items-center gap-1.5">
+              <i class="fas fa-trash-can"></i> Thực Hiện Dọn Ảnh
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL: CHECKER SELECT INSPECTION CYCLE ================= -->
+  <!-- ================= MODAL: SET-UP CHECKSHEET & LOẠI THIẾT BỊ (BÁNH RĂNG) ================= -->
+  <div id="modal-device-config" class="no-print fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between shrink-0">
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i class="fas fa-cog text-indigo-400"></i> Set-up Loại Thiết Bị &amp; Mẫu Checksheet
+        </h3>
+        <button onclick="closeDeviceConfigModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div id="device-config-modal-body" class="p-5 space-y-5 text-xs overflow-y-auto flex-1"></div>
+
+      <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <span class="text-[11px] text-slate-500">Thay đổi sẽ đồng bộ lên Supabase &amp; áp dụng ngay cho Checker.</span>
+        <div class="flex items-center gap-2">
+          <button onclick="closeDeviceConfigModal()" class="px-4 py-2 rounded-xl font-bold text-slate-500 hover:text-slate-800 text-xs">Đóng</button>
+          <button onclick="saveDeviceConfigToCloud()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-xl text-xs shadow flex items-center gap-1.5">
+            <i class="fas fa-floppy-disk"></i> Lưu Cài Đặt
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CHECKER SELECT CYCLE ================= -->
   <div id="modal-checker-cycle" class="no-print fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
       <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-5">
@@ -682,10 +716,7 @@
       </div>
 
       <div class="p-6 space-y-4">
-        <p class="text-xs text-slate-600">
-          Vui lòng xác định chu kỳ tháng kiểm tra trước khi tiến hành quét mã và gửi checksheet:
-        </p>
-
+        <p class="text-xs text-slate-600">Vui lòng xác định chu kỳ tháng kiểm tra trước khi tiến hành quét mã và gửi checksheet:</p>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Tháng:</label>
@@ -696,12 +727,6 @@
             <select id="cycle-select-year" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"></select>
           </div>
         </div>
-
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] flex items-start gap-2">
-          <i class="fas fa-circle-info text-amber-500 mt-0.5"></i>
-          <span>Kết quả checksheet sẽ được cập nhật trực tiếp vào hệ thống báo cáo theo tháng đã chọn.</span>
-        </div>
-
         <button onclick="confirmCheckerCycle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg transition-all flex items-center justify-center gap-2">
           <i class="fas fa-arrow-right"></i> Bắt Đầu Kiểm Tra
         </button>
@@ -709,7 +734,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: ADD / EDIT DEVICE (OWNER) ================= -->
+  <!-- ================= MODAL: ADD / EDIT DEVICE ================= -->
   <div id="modal-device-form" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
@@ -722,19 +747,12 @@
       <div class="p-5 space-y-3.5 text-xs">
         <div>
           <label class="block font-bold text-slate-700 mb-1">Loại thiết bị: <span class="text-rose-500">*</span></label>
-          <select id="form-device-type" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500">
-            <option value="Bình bột ABC">Bình bột ABC</option>
-            <option value="Bình khí CO2">Bình khí CO2</option>
-            <option value="Họng chữa cháy">Họng chữa cháy</option>
-            <option value="Chuông/ đèn/ còi báo cháy">Chuông/ đèn/ còi báo cháy</option>
-            <option value="Tủ báo cháy">Tủ báo cháy</option>
-            <option value="Quạt hút khói">Quạt hút khói</option>
-          </select>
+          <select id="form-device-type" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500"></select>
         </div>
 
         <div>
           <label class="block font-bold text-slate-700 mb-1">Mã thiết bị: <span class="text-rose-500">*</span></label>
-          <input type="text" id="form-device-code" placeholder="Ví dụ: ABC-AGM-GF2-D/03-0006" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-1 focus:ring-emerald-500 uppercase">
+          <input type="text" id="form-device-code" placeholder="Ví dụ: B1-FF-2F-001" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-1 focus:ring-emerald-500 uppercase">
         </div>
 
         <div>
@@ -762,7 +780,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: VIEW DEVICE INSPECTION HISTORY ================= -->
+  <!-- ================= MODAL: VIEW DEVICE HISTORY ================= -->
   <div id="modal-device-history" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
@@ -836,7 +854,6 @@
           <label class="block font-bold text-slate-700 mb-1">Xác nhận mật khẩu mới: <span class="text-rose-500">*</span></label>
           <input type="password" id="owner-confirm-pass" placeholder="Nhập lại mật khẩu mới..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500">
         </div>
-
         <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
           <button onclick="closeChangePasswordModal()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700">Hủy</button>
           <button onclick="submitChangeOwnerPassword()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg shadow">
@@ -844,17 +861,6 @@
           </button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: CUSTOM DIALOG (ADD CHECKER / EDIT PASS / CONFIRM DELETE) ================= -->
-  <div id="modal-custom-dialog" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
-      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
-        <h3 id="custom-dialog-title" class="text-xs font-bold uppercase tracking-wider">Xác nhận</h3>
-        <button onclick="closeCustomDialog()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-      </div>
-      <div id="custom-dialog-body" class="p-5 space-y-3 text-xs"></div>
     </div>
   </div>
 
@@ -876,7 +882,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: WEBCAM SNAPSHOT FOR DESKTOP ================= -->
+  <!-- ================= MODAL: WEBCAM SNAPSHOT ================= -->
   <div id="modal-webcam" class="no-print fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
@@ -897,6 +903,24 @@
     </div>
   </div>
 
+  <!-- ================= CUSTOM CONFIRM / INPUT DIALOG MODAL ================= -->
+  <div id="modal-action-dialog" class="no-print fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 id="action-dialog-title" class="text-xs font-bold uppercase tracking-wider">Xác nhận thao tác</h3>
+        <button onclick="closeActionDialog()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-3.5 text-xs">
+        <p id="action-dialog-message" class="text-slate-600 leading-relaxed"></p>
+        <input type="text" id="action-dialog-input" class="hidden w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button onclick="closeActionDialog()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700">Hủy</button>
+          <button id="action-dialog-confirm-btn" onclick="submitActionDialog()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl shadow">Xác nhận</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= FOOTER ================= -->
   <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
@@ -904,7 +928,7 @@
     </div>
   </footer>
 
-  <!-- ================= JAVASCRIPT APPLICATION CORE (SUPABASE CLOUD INTEGRATED) ================= -->
+  <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
   <script>
     /* ============================================================================
        CẤU HÌNH KẾT NỐI SUPABASE
@@ -932,100 +956,154 @@
       isSupabaseReady = false;
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function updateCloudSyncBadge(status, text) {
       const badge = document.getElementById("cloud-sync-badge");
       if (!badge) return;
       if (status === "connected") {
         badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700";
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${text || "Supabase Cloud Online"}`;
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${escapeHtml(text || "Supabase Cloud Online")}`;
       } else if (status === "error") {
         badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-[10px] font-bold text-rose-700";
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ${text || "Lỗi kết nối Supabase"}`;
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ${escapeHtml(text || "Lỗi kết nối Supabase")}`;
       } else {
         badge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700";
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> ${text || "Chế độ Local"}`;
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> ${escapeHtml(text || "Chế độ Local")}`;
       }
     }
 
     /* ========================================================
-       DATA STORAGE & INITIAL SEED DATA
+       CUSTOM DIALOG HELPER
        ======================================================== */
-    const STORAGE_KEY_DEVICES = 'EHS_BOYD_DEVICES_V2';
-    const STORAGE_KEY_CHECKERS = 'EHS_BOYD_CHECKERS_V2';
-    const STORAGE_KEY_INSPECTIONS = 'EHS_BOYD_INSPECTIONS_V2';
-    const STORAGE_KEY_OWNER_AUTH = 'EHS_BOYD_OWNER_AUTH_V2';
+    let actionDialogCallback = null;
+
+    function openActionDialog({ title, message, showInput = false, defaultValue = '', confirmText = 'Xác nhận', isDanger = false, onConfirm }) {
+      document.getElementById('action-dialog-title').textContent = title || 'Xác nhận';
+      document.getElementById('action-dialog-message').textContent = message || '';
+      const inputEl = document.getElementById('action-dialog-input');
+      if (showInput) {
+        inputEl.value = defaultValue;
+        inputEl.classList.remove('hidden');
+      } else {
+        inputEl.value = '';
+        inputEl.classList.add('hidden');
+      }
+      const btn = document.getElementById('action-dialog-confirm-btn');
+      btn.textContent = confirmText;
+      btn.className = isDanger
+        ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl shadow'
+        : 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl shadow';
+
+      actionDialogCallback = onConfirm;
+      const modal = document.getElementById('modal-action-dialog');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (showInput) setTimeout(() => inputEl.focus(), 50);
+    }
+
+    function closeActionDialog() {
+      const modal = document.getElementById('modal-action-dialog');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      actionDialogCallback = null;
+    }
+
+    async function submitActionDialog() {
+      const cb = actionDialogCallback;
+      const val = document.getElementById('action-dialog-input').value;
+      closeActionDialog();
+      if (typeof cb === 'function') {
+        await cb(val);
+      }
+    }
+
+    /* ========================================================
+       DATA STORAGE & DEFAULT TEMPLATES (KHÔNG CÒN DỮ LIỆU MẪU)
+       ======================================================== */
+    const STORAGE_KEY_DEVICES = 'EHS_BOYD_DEVICES_V3';
+    const STORAGE_KEY_CHECKERS = 'EHS_BOYD_CHECKERS_V3';
+    const STORAGE_KEY_INSPECTIONS = 'EHS_BOYD_INSPECTIONS_V3';
+    const STORAGE_KEY_OWNER_AUTH = 'EHS_BOYD_OWNER_AUTH_V3';
+    const STORAGE_KEY_DEVICE_CONFIG = 'EHS_BOYD_DEVICE_CONFIG_V3';
 
     const DEFAULT_OWNER_AUTH = { username: 'admin', password: 'admin' };
 
-    const DEFAULT_CHECKERS = [
-      { id: 'chk_1', name: 'Checker 1', pass: '123456' },
-      { id: 'chk_2', name: 'Checker 2', pass: '123456' },
-      { id: 'chk_3', name: 'Checker 3', pass: '123456' }
+    const DEFAULT_DEVICE_TYPES = [
+      'Bình bột ABC',
+      'Bình khí CO2',
+      'Họng chữa cháy',
+      'Chuông/ đèn/ còi báo cháy',
+      'Tủ báo cháy',
+      'Quạt hút khói'
     ];
 
-    const DEFAULT_DEVICES = [
-      { type: 'Bình khí CO2', code: 'CO2-MGH-2F-D/01-0005', workshop: 'Xưởng 1', location: 'Cột D1 Tầng 2 Xưởng 1', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Bình bột ABC', code: 'ABC-AGM-GF2-D/03-0004', workshop: 'Xưởng 2', location: 'Cột D3 Xưởng 2 AGM', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Bình bột ABC', code: 'ABC-AGM-GF2-D/03-0005', workshop: 'Xưởng 2', location: 'Cửa thoát hiểm 3 Xưởng 2', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Bình bột ABC', code: 'ABC-EXT-001', workshop: 'Xưởng 3', location: 'Khu vực đóng gói Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Bình khí CO2', code: 'CO2-EXT-002', workshop: 'Xưởng 3', location: 'Tủ điện tổng Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Họng chữa cháy', code: 'FC-WS1-Z1-01', workshop: 'Xưởng 1', location: 'Họng vách tường sảnh chính X1', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Họng chữa cháy', code: 'FC-WS2-Z2-02', workshop: 'Xưởng 2', location: 'Cạnh kho nguyên liệu X2', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Chuông/ đèn/ còi báo cháy', code: 'FAB-WS1-01', workshop: 'Xưởng 1', location: 'Tường đông Xưởng 1', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Chuông/ đèn/ còi báo cháy', code: 'FAB-WS3-03', workshop: 'Xưởng 3', location: 'Cửa xuất hàng Xưởng 3', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Tủ báo cháy', code: 'FACP-CENTRAL-01', workshop: 'Xưởng 1', location: 'Phòng an ninh trung tâm', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Quạt hút khói', code: 'EF-ROOF-WS2-01', workshop: 'Xưởng 2', location: 'Mái Xưởng 2 khu vực hàn', history: 'Khởi tạo hệ thống (10/01/2026)' },
-      { type: 'Quạt hút khói', code: 'SF-WS1-AIR-02', workshop: 'Xưởng 1', location: 'Phòng kỹ thuật thông gió X1', history: 'Khởi tạo hệ thống (10/01/2026)' }
-    ];
+    function createDefaultChecklistTemplates() {
+      return {
+        'Bình bột ABC': [
+          '1. Vị trí đặt bình thông thoáng, dễ thấy, dễ lấy',
+          '2. Đồng hồ đo áp suất (Áp kế) kim chỉ vạch XANH',
+          '3. Chốt niêm phong và kẹp chì còn nguyên vẹn',
+          '4. Vỏ bình nguyên vẹn, không rỉ sét móp méo',
+          '5. Dây vòi phun, loa phun không nứt nẻ tắc nghẽn',
+          '6. Thẻ/tem kiểm định còn hiệu lực'
+        ],
+        'Bình khí CO2': [
+          '1. Vị trí đặt bình thông thoáng, tránh ánh nắng trực tiếp',
+          '2. Chốt an toàn và dây chì niêm phong nguyên vẹn',
+          '3. Trọng lượng bình đảm bảo (cân nặng không hụt >10%)',
+          '4. Vỏ bình chịu áp lực cao không rỉ sét biến dạng',
+          '5. Cụm loa phun CO2 (loa cứng cách nhiệt) không nứt vỡ',
+          '6. Van xả, cò bóp hoạt động tốt',
+          '7. Tem kiểm định còn hạn sử dụng'
+        ],
+        'Họng chữa cháy': [
+          '1. Cửa tủ họng PCCC đóng mở trơn tru, kính không vỡ',
+          '2. Cuộn vòi bạt khô ráo, không mốc rách, cuộn đúng kỹ thuật',
+          '3. Khớp nối và đầu lăng phun sáng bóng, gioăng cao su kín',
+          '4. Van góc đóng mở nhẹ nhàng, không rò rỉ nước',
+          '5. Bảng hướng dẫn sử dụng rõ ràng, dễ đọc'
+        ],
+        'Chuông/ đèn/ còi báo cháy': [
+          '1. Nút nhấn khẩn cấp nguyên vẹn, kính/màng bảo vệ tốt',
+          '2. Đèn báo vị trí sáng liên tục',
+          '3. Còi/chuông báo động chắc chắn, không bị che khuất',
+          '4. Không có bụi bẩn hoặc rác quấn quanh cụm thiết bị'
+        ],
+        'Tủ báo cháy': [
+          '1. Tủ hoạt động ở trạng thái bình thường (Đèn AC Power ON)',
+          '2. Không có báo lỗi Zone hoặc Trouble bất thường',
+          '3. Ắc quy dự phòng điện áp ổn định',
+          '4. Khóa tủ đóng kín, chìa khóa dự phòng tại chỗ'
+        ],
+        'Quạt hút khói': [
+          '1. Cửa gió tự động mở khi kích hoạt kiểm tra',
+          '2. Động cơ quạt quay êm, không rung giật hoặc kêu lạ',
+          '3. Tủ điều khiển quạt ở chế độ AUTO',
+          '4. Không có vật cản trước cửa gió hút và thổi'
+        ]
+      };
+    }
 
-    const DEFAULT_INSPECTIONS = [
-      {
-        id: 'INS-001',
-        deviceCode: 'ABC-AGM-GF2-D/03-0004',
-        deviceType: 'Bình bột ABC',
-        workshop: 'Xưởng 2',
-        checkerName: 'Checker 1',
-        timestamp: '2026-10-24 14:53',
-        month: 10,
-        year: 2026,
-        status: 'OK',
-        photo: 'https://placehold.co/400x400/059669/ffffff?text=ABC+OK+Verified',
-        checklist: { '1. Vị trí đặt bình thông thoáng': 'OK', '2. Kim áp kế chỉ vạch XANH': 'OK', '3. Chốt niêm chì nguyên vẹn': 'OK' },
-        notes: 'Áp suất chuẩn vạch xanh, niêm chì nguyên vẹn.'
-      },
-      {
-        id: 'INS-002',
-        deviceCode: 'CO2-MGH-2F-D/01-0005',
-        deviceType: 'Bình khí CO2',
-        workshop: 'Xưởng 1',
-        checkerName: 'Checker 1',
-        timestamp: '2026-10-24 07:18',
-        month: 10,
-        year: 2026,
-        status: 'NG',
-        photo: 'https://placehold.co/400x400/dc2626/ffffff?text=CO2+NG+Weight',
-        checklist: { '1. Vị trí râm mát': 'OK', '2. Cân nặng khí CO2': 'NG', '3. Loa cách nhiệt': 'OK' },
-        notes: 'Cân bình hao hụt khí quá mức cho phép, cần nạp lại khí CO2 khẩn cấp.'
-      },
-      {
-        id: 'INS-003',
-        deviceCode: 'FC-WS1-Z1-01',
-        deviceType: 'Họng chữa cháy',
-        workshop: 'Xưởng 1',
-        checkerName: 'Checker 2',
-        timestamp: '2026-10-23 09:15',
-        month: 10,
-        year: 2026,
-        status: 'OK',
-        photo: 'https://placehold.co/400x400/059669/ffffff?text=Fire+Cabinet+OK',
-        checklist: { '1. Cuộn vòi & khớp nối': 'OK', '2. Van góc mở êm': 'OK' },
-        notes: 'Cuộn vòi khô ráo, van nhẹ.'
-      }
-    ];
+    // Toàn bộ dữ liệu khởi tạo mẫu đã được xóa trống hoàn toàn
+    const DEFAULT_CHECKERS = [];
+    const DEFAULT_DEVICES = [];
+    const DEFAULT_INSPECTIONS = [];
 
     let state = {
       currentUser: null,
       ownerAuth: { ...DEFAULT_OWNER_AUTH },
+      deviceTypes: [...DEFAULT_DEVICE_TYPES],
+      checklistTemplates: createDefaultChecklistTemplates(),
+      configSelectedType: DEFAULT_DEVICE_TYPES[0],
       devices: [],
       checkers: [],
       inspections: [],
@@ -1038,38 +1116,12 @@
       checkerActiveYear: new Date().getFullYear()
     };
 
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
     /* ========================================================
-       CUSTOM DIALOG HELPER (THAY THẾ PROMPT / CONFIRM)
-       ======================================================== */
-    function openCustomDialog(title, bodyHtml) {
-      document.getElementById('custom-dialog-title').textContent = title;
-      document.getElementById('custom-dialog-body').innerHTML = bodyHtml;
-      const modal = document.getElementById('modal-custom-dialog');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function closeCustomDialog() {
-      const modal = document.getElementById('modal-custom-dialog');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    /* ========================================================
-       APP INITIALIZATION & SUPABASE CLOUD SYNC
+       INITIALIZATION & SUPABASE CLOUD SYNC
        ======================================================== */
     window.addEventListener('DOMContentLoaded', async () => {
       loadDataFromLocalStorage();
+      syncDeviceTypeDropdowns();
       populateMonthYearFilters();
       renderCheckerSelectDropdown();
       renderCheckerAccountList();
@@ -1095,11 +1147,24 @@
 
         const authStr = localStorage.getItem(STORAGE_KEY_OWNER_AUTH);
         state.ownerAuth = authStr ? JSON.parse(authStr) : { ...DEFAULT_OWNER_AUTH };
+
+        const cfgStr = localStorage.getItem(STORAGE_KEY_DEVICE_CONFIG);
+        if (cfgStr) {
+          const parsedCfg = JSON.parse(cfgStr);
+          if (Array.isArray(parsedCfg.deviceTypes) && parsedCfg.deviceTypes.length > 0) {
+            state.deviceTypes = parsedCfg.deviceTypes;
+          }
+          if (parsedCfg.checklistTemplates && typeof parsedCfg.checklistTemplates === 'object') {
+            state.checklistTemplates = parsedCfg.checklistTemplates;
+          }
+        }
       } catch (e) {
-        state.devices = [...DEFAULT_DEVICES];
-        state.checkers = [...DEFAULT_CHECKERS];
-        state.inspections = [...DEFAULT_INSPECTIONS];
+        state.devices = [];
+        state.checkers = [];
+        state.inspections = [];
         state.ownerAuth = { ...DEFAULT_OWNER_AUTH };
+        state.deviceTypes = [...DEFAULT_DEVICE_TYPES];
+        state.checklistTemplates = createDefaultChecklistTemplates();
       }
     }
 
@@ -1108,6 +1173,10 @@
         localStorage.setItem(STORAGE_KEY_DEVICES, JSON.stringify(state.devices));
         localStorage.setItem(STORAGE_KEY_CHECKERS, JSON.stringify(state.checkers));
         localStorage.setItem(STORAGE_KEY_OWNER_AUTH, JSON.stringify(state.ownerAuth));
+        localStorage.setItem(STORAGE_KEY_DEVICE_CONFIG, JSON.stringify({
+          deviceTypes: state.deviceTypes,
+          checklistTemplates: state.checklistTemplates
+        }));
         const lightInspections = state.inspections.slice(0, 50).map(i => ({
           ...i,
           photo: i.photo && i.photo.startsWith('data:image') ? '' : i.photo
@@ -1158,48 +1227,47 @@
       const { data: settingsData, error: setErr } = await supabaseClient
         .from('pccc_settings')
         .select('*')
-        .eq('key', 'owner_auth')
-        .maybeSingle();
+        .in('key', ['owner_auth', 'device_config']);
 
       if (setErr) throw setErr;
-      if (settingsData && settingsData.value) {
-        state.ownerAuth = settingsData.value;
+      if (Array.isArray(settingsData)) {
+        const authRow = settingsData.find(r => r.key === 'owner_auth');
+        if (authRow && authRow.value) state.ownerAuth = authRow.value;
+
+        const cfgRow = settingsData.find(r => r.key === 'device_config');
+        if (cfgRow && cfgRow.value) {
+          if (Array.isArray(cfgRow.value.deviceTypes) && cfgRow.value.deviceTypes.length > 0) {
+            state.deviceTypes = cfgRow.value.deviceTypes;
+          }
+          if (cfgRow.value.checklistTemplates && typeof cfgRow.value.checklistTemplates === 'object') {
+            state.checklistTemplates = cfgRow.value.checklistTemplates;
+          }
+        }
       }
 
       const { data: devicesData, error: devErr } = await supabaseClient
         .from('pccc_devices')
         .select('*');
       if (devErr) throw devErr;
-
-      if (!devicesData || devicesData.length === 0) {
-        await supabaseClient.from('pccc_devices').insert(DEFAULT_DEVICES);
-        await supabaseClient.from('pccc_checkers').upsert(DEFAULT_CHECKERS);
-        await supabaseClient.from('pccc_settings').upsert({
-          key: 'owner_auth',
-          value: DEFAULT_OWNER_AUTH
-        });
-        state.devices = [...DEFAULT_DEVICES];
-        state.checkers = [...DEFAULT_CHECKERS];
-      } else {
-        state.devices = devicesData;
-      }
+      state.devices = devicesData || [];
 
       const { data: checkersData, error: chkErr } = await supabaseClient
         .from('pccc_checkers')
         .select('*');
-      if (!chkErr && checkersData && checkersData.length > 0) {
-        state.checkers = checkersData;
+      if (!chkErr) {
+        state.checkers = checkersData || [];
       }
 
       const { data: insData, error: insErr } = await supabaseClient
         .from('pccc_inspections')
         .select('*')
         .order('timestamp', { ascending: false });
-      if (!insErr && insData) {
-        state.inspections = insData.map(mapInspectionFromDB);
+      if (!insErr) {
+        state.inspections = (insData || []).map(mapInspectionFromDB);
       }
 
       saveLocalBackup();
+      syncDeviceTypeDropdowns();
       renderCheckerSelectDropdown();
       renderCheckerAccountList();
       refreshActiveViews();
@@ -1208,7 +1276,7 @@
     function startSupabasePollingFallback() {
       if (supabasePollTimer) clearInterval(supabasePollTimer);
       supabasePollTimer = setInterval(() => {
-        if (isSupabaseReady && supabaseClient) {
+        if (isSupabaseReady && supabaseClient && !document.hidden) {
           fetchAllSupabaseData().catch(() => {});
         }
       }, 30000);
@@ -1220,14 +1288,14 @@
         await fetchAllSupabaseData();
         updateCloudSyncBadge("connected", "Supabase Cloud Online");
       } catch (err) {
-        console.error("Supabase Sync Error:", err);
+        console.error("Supabase HTTP Sync Error:", err);
         updateCloudSyncBadge("error", "Lỗi kết nối Supabase");
-        showToast("Không thể kết nối Supabase. Đang dùng dữ liệu Local.", true);
+        showToast("Không thể kết nối Supabase. Đang chạy tạm dữ liệu Local!", true);
         return;
       }
 
-      // Môi trường Canvas Preview (blob:) chặn WebSocket; dùng đồng bộ định kỳ 30s để không báo lỗi console
-      if (window.location.protocol === 'blob:') {
+      const isSandboxedPreview = window.location.protocol === 'blob:' || window.location.protocol === 'about:' || typeof WebSocket === 'undefined';
+      if (isSandboxedPreview) {
         startSupabasePollingFallback();
         return;
       }
@@ -1235,24 +1303,16 @@
       try {
         supabaseClient
           .channel('pccc-realtime-channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_devices' }, () => {
-            fetchAllSupabaseData().catch(() => {});
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_checkers' }, () => {
-            fetchAllSupabaseData().catch(() => {});
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_inspections' }, () => {
-            fetchAllSupabaseData().catch(() => {});
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_settings' }, () => {
-            fetchAllSupabaseData().catch(() => {});
-          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_devices' }, () => fetchAllSupabaseData().catch(() => {}))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_checkers' }, () => fetchAllSupabaseData().catch(() => {}))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_inspections' }, () => fetchAllSupabaseData().catch(() => {}))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pccc_settings' }, () => fetchAllSupabaseData().catch(() => {}))
           .subscribe((status) => {
             if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
               startSupabasePollingFallback();
             }
           });
-      } catch (rtErr) {
+      } catch (wsErr) {
         startSupabasePollingFallback();
       }
     }
@@ -1314,32 +1374,39 @@
       }
     }
 
+    async function cloudSaveDeviceConfig() {
+      saveLocalBackup();
+      if (isSupabaseReady && supabaseClient) {
+        const { error } = await supabaseClient.from('pccc_settings').upsert({
+          key: 'device_config',
+          value: {
+            deviceTypes: state.deviceTypes,
+            checklistTemplates: state.checklistTemplates
+          }
+        });
+        if (error) throw error;
+      }
+    }
+
     function dataURLtoBlob(dataUrl) {
       const arr = dataUrl.split(',');
       const mime = arr[0].match(/:(.*?);/)[1];
       const bstr = atob(arr[1]);
       let n = bstr.length;
       const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
       return new Blob([u8arr], { type: mime });
     }
 
     async function uploadPhotoToSupabaseStorage(dataUrl, deviceCode, inspectionId) {
-      if (!isSupabaseReady || !supabaseClient) {
-        return dataUrl;
-      }
+      if (!isSupabaseReady || !supabaseClient) return dataUrl;
       const safeCode = deviceCode.replace(/[^a-zA-Z0-9_-]/g, '_');
       const filePath = `${safeCode}/${inspectionId}.jpg`;
       const blob = dataURLtoBlob(dataUrl);
 
       const { error: uploadError } = await supabaseClient.storage
         .from('pccc-photos')
-        .upload(filePath, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
+        .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -1361,18 +1428,19 @@
     }
 
     function populateMonthYearFilters() {
-      const mSelect = document.getElementById('report-filter-month');
-      const ySelect = document.getElementById('report-filter-year');
-      const gmSelect = document.getElementById('guest-filter-month');
-      const gySelect = document.getElementById('guest-filter-year');
-      const cmSelect = document.getElementById('cycle-select-month');
-      const cySelect = document.getElementById('cycle-select-year');
-
+      const pairs = [
+        ['report-filter-month', 'report-filter-year'],
+        ['guest-filter-month', 'guest-filter-year'],
+        ['cycle-select-month', 'cycle-select-year'],
+        ['cleanup-select-month', 'cleanup-select-year']
+      ];
       const curDate = new Date();
       const curMonth = curDate.getMonth() + 1;
       const curYear = curDate.getFullYear();
 
-      const populate = (mEl, yEl) => {
+      pairs.forEach(([mId, yId]) => {
+        const mEl = document.getElementById(mId);
+        const yEl = document.getElementById(yId);
         if (!mEl || !yEl) return;
         mEl.innerHTML = '';
         for (let m = 1; m <= 12; m++) {
@@ -1390,11 +1458,7 @@
           if (y === curYear) opt.selected = true;
           yEl.appendChild(opt);
         }
-      };
-
-      populate(mSelect, ySelect);
-      populate(gmSelect, gySelect);
-      populate(cmSelect, cySelect);
+      });
     }
 
     /* ========================================================
@@ -1407,9 +1471,7 @@
       msgEl.textContent = msg;
       toast.className = `no-print fixed bottom-5 right-5 z-50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transition-all transform duration-300 ${isError ? 'bg-rose-600' : 'bg-emerald-600'}`;
       toast.classList.remove('hidden');
-      setTimeout(() => {
-        toast.classList.add('hidden');
-      }, 3500);
+      setTimeout(() => toast.classList.add('hidden'), 3500);
     }
 
     function handleLoginOwner() {
@@ -1444,22 +1506,10 @@
       const newP = document.getElementById('owner-new-pass').value.trim();
       const confP = document.getElementById('owner-confirm-pass').value.trim();
 
-      if (!oldP || !newP || !confP) {
-        showToast('Vui lòng nhập đầy đủ các trường thông tin!', true);
-        return;
-      }
-      if (oldP !== state.ownerAuth.password) {
-        showToast('Mật khẩu hiện tại không đúng!', true);
-        return;
-      }
-      if (newP !== confP) {
-        showToast('Mật khẩu xác nhận không khớp với mật khẩu mới!', true);
-        return;
-      }
-      if (newP.length < 4) {
-        showToast('Mật khẩu mới phải có ít nhất 4 ký tự!', true);
-        return;
-      }
+      if (!oldP || !newP || !confP) { showToast('Vui lòng nhập đầy đủ các trường thông tin!', true); return; }
+      if (oldP !== state.ownerAuth.password) { showToast('Mật khẩu hiện tại không đúng!', true); return; }
+      if (newP !== confP) { showToast('Mật khẩu xác nhận không khớp!', true); return; }
+      if (newP.length < 4) { showToast('Mật khẩu mới phải có ít nhất 4 ký tự!', true); return; }
 
       try {
         state.ownerAuth.password = newP;
@@ -1505,10 +1555,10 @@
             <span class="font-mono text-slate-400 text-[11px]">(Mật khẩu: ${escapeHtml(chk.pass)})</span>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openChangeCheckerPassModal('${escapeHtml(chk.id)}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-[11px] px-2 py-1 rounded hover:bg-indigo-50" title="Đổi mật khẩu">
+            <button onclick="changeCheckerPassword('${escapeHtml(chk.id)}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-[11px] px-2 py-1 rounded hover:bg-indigo-50">
               <i class="fas fa-key"></i> Đổi pass
             </button>
-            <button onclick="openDeleteCheckerModal('${escapeHtml(chk.id)}')" class="text-rose-500 hover:text-rose-700 font-semibold text-[11px] px-2 py-1 rounded hover:bg-rose-50" title="Xóa Checker">
+            <button onclick="deleteCheckerAccount('${escapeHtml(chk.id)}')" class="text-rose-500 hover:text-rose-700 font-semibold text-[11px] px-2 py-1 rounded hover:bg-rose-50">
               <i class="fas fa-trash-alt"></i> Xóa
             </button>
           </div>
@@ -1517,117 +1567,79 @@
       });
     }
 
-    function openAddCheckerModal() {
-      openCustomDialog('Thêm Tài Khoản Checker Mới', `
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Tên tài khoản Checker *</label>
-          <input type="text" id="dlg-chk-name" placeholder="VD: Checker 4" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Mật khẩu *</label>
-          <input type="text" id="dlg-chk-pass" value="123456" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
-          <button onclick="submitAddNewChecker()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg shadow">Lưu Checker</button>
-        </div>
-      `);
-    }
-
-    async function submitAddNewChecker() {
-      const name = (document.getElementById('dlg-chk-name')?.value || '').trim();
-      const pass = (document.getElementById('dlg-chk-pass')?.value || '').trim();
+    async function addNewChecker() {
+      const nameInput = document.getElementById('new-checker-name');
+      const passInput = document.getElementById('new-checker-pass');
+      const name = (nameInput?.value || '').trim();
+      const pass = (passInput?.value || '').trim();
       if (!name || !pass) {
-        showToast('Vui lòng nhập đầy đủ tên và mật khẩu!', true);
+        showToast('Vui lòng nhập đầy đủ tên và mật khẩu Checker!', true);
         return;
       }
+
       try {
-        const newChecker = {
-          id: 'chk_' + Date.now().toString().slice(-5),
-          name,
-          pass
-        };
+        const newChecker = { id: 'chk_' + Date.now().toString().slice(-5), name, pass };
         state.checkers.push(newChecker);
         await cloudSaveChecker(newChecker);
+        if (nameInput) nameInput.value = '';
         renderCheckerSelectDropdown();
         renderCheckerAccountList();
-        closeCustomDialog();
         showToast(`Đã thêm mới Checker: ${name}`);
       } catch (err) {
         showToast('Lỗi thêm Checker: ' + err.message, true);
       }
     }
 
-    function openChangeCheckerPassModal(chkId) {
+    function changeCheckerPassword(chkId) {
       const chk = state.checkers.find(c => c.id === chkId);
       if (!chk) return;
-      openCustomDialog(`Đổi Mật Khẩu — ${chk.name}`, `
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Mật khẩu mới *</label>
-          <input type="text" id="dlg-chk-newpass" value="${escapeHtml(chk.pass)}" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
-          <button onclick="submitChangeCheckerPass('${escapeHtml(chk.id)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg shadow">Cập nhật</button>
-        </div>
-      `);
+      openActionDialog({
+        title: `Đổi mật khẩu ${chk.name}`,
+        message: `Nhập mật khẩu mới cho tài khoản ${chk.name}:`,
+        showInput: true,
+        defaultValue: chk.pass,
+        confirmText: 'Lưu mật khẩu',
+        onConfirm: async (newPass) => {
+          const trimmed = (newPass || '').trim();
+          if (!trimmed) { showToast('Mật khẩu không được để trống!', true); return; }
+          try {
+            chk.pass = trimmed;
+            await cloudSaveChecker(chk);
+            renderCheckerAccountList();
+            showToast(`Đã cập nhật mật khẩu cho ${chk.name}`);
+          } catch (err) {
+            showToast('Lỗi đổi mật khẩu: ' + err.message, true);
+          }
+        }
+      });
     }
 
-    async function submitChangeCheckerPass(chkId) {
-      const chk = state.checkers.find(c => c.id === chkId);
-      const newPass = (document.getElementById('dlg-chk-newpass')?.value || '').trim();
-      if (!chk || !newPass) {
-        showToast('Vui lòng nhập mật khẩu mới!', true);
-        return;
-      }
-      try {
-        chk.pass = newPass;
-        await cloudSaveChecker(chk);
-        renderCheckerAccountList();
-        closeCustomDialog();
-        showToast(`Đã cập nhật mật khẩu cho ${chk.name}`);
-      } catch (err) {
-        showToast('Lỗi đổi mật khẩu: ' + err.message, true);
-      }
-    }
-
-    function openDeleteCheckerModal(chkId) {
+    function deleteCheckerAccount(chkId) {
       const chk = state.checkers.find(c => c.id === chkId);
       if (!chk) return;
-      openCustomDialog('Xác Nhận Xóa Tài Khoản', `
-        <p class="text-slate-600">Bạn có chắc muốn xóa tài khoản Checker <b>${escapeHtml(chk.name)}</b> không?</p>
-        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
-          <button onclick="confirmDeleteCheckerAccount('${escapeHtml(chk.id)}')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg shadow">Xóa Tài Khoản</button>
-        </div>
-      `);
-    }
-
-    async function confirmDeleteCheckerAccount(chkId) {
-      const chk = state.checkers.find(c => c.id === chkId);
-      if (!chk) return;
-      try {
-        state.checkers = state.checkers.filter(c => c.id !== chkId);
-        await cloudDeleteChecker(chkId);
-        renderCheckerSelectDropdown();
-        renderCheckerAccountList();
-        closeCustomDialog();
-        showToast(`Đã xóa tài khoản ${chk.name}`);
-      } catch (err) {
-        showToast('Lỗi xóa Checker: ' + err.message, true);
-      }
+      openActionDialog({
+        title: 'Xóa tài khoản Checker',
+        message: `Bạn có chắc chắn muốn xóa tài khoản "${chk.name}" khỏi hệ thống?`,
+        confirmText: 'Xóa ngay',
+        isDanger: true,
+        onConfirm: async () => {
+          try {
+            state.checkers = state.checkers.filter(c => c.id !== chkId);
+            await cloudDeleteChecker(chkId);
+            renderCheckerSelectDropdown();
+            renderCheckerAccountList();
+            showToast(`Đã xóa tài khoản ${chk.name}`);
+          } catch (err) {
+            showToast('Lỗi xóa Checker: ' + err.message, true);
+          }
+        }
+      });
     }
 
     function handleLoginChecker() {
-      const select = document.getElementById('login-checker-select');
-      const passInput = document.getElementById('login-checker-pass');
-      const chkId = select ? select.value : '';
-      const pass = passInput ? passInput.value.trim() : '';
-
-      if (!chkId) {
-        showToast('Vui lòng chọn tài khoản Checker!', true);
-        return;
-      }
+      const chkId = document.getElementById('login-checker-select')?.value || '';
+      const pass = document.getElementById('login-checker-pass')?.value.trim() || '';
+      if (!chkId) { showToast('Vui lòng chọn tài khoản Checker!', true); return; }
       const targetChecker = state.checkers.find(c => c.id === chkId);
       if (targetChecker && targetChecker.pass === pass) {
         state.currentUser = { role: 'CHECKER', name: targetChecker.name, id: targetChecker.id };
@@ -1642,30 +1654,19 @@
     function openCheckerCycleModal() {
       const modal = document.getElementById('modal-checker-cycle');
       if (!modal) return;
-      const cmSelect = document.getElementById('cycle-select-month');
-      const cySelect = document.getElementById('cycle-select-year');
-      if (cmSelect) cmSelect.value = state.checkerActiveMonth;
-      if (cySelect) cySelect.value = state.checkerActiveYear;
+      document.getElementById('cycle-select-month').value = state.checkerActiveMonth;
+      document.getElementById('cycle-select-year').value = state.checkerActiveYear;
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
 
     function confirmCheckerCycle() {
-      const cmSelect = document.getElementById('cycle-select-month');
-      const cySelect = document.getElementById('cycle-select-year');
-      if (cmSelect && cySelect) {
-        state.checkerActiveMonth = parseInt(cmSelect.value, 10);
-        state.checkerActiveYear = parseInt(cySelect.value, 10);
-      }
-      const badge = document.getElementById('checker-current-cycle-badge');
-      if (badge) {
-        badge.textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
-      }
+      state.checkerActiveMonth = parseInt(document.getElementById('cycle-select-month').value, 10);
+      state.checkerActiveYear = parseInt(document.getElementById('cycle-select-year').value, 10);
+      document.getElementById('checker-current-cycle-badge').textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
       const modal = document.getElementById('modal-checker-cycle');
-      if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-      }
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
       renderCheckerPendingDevices();
       showToast(`Đã chọn chu kỳ kiểm tra: Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`);
     }
@@ -1679,8 +1680,7 @@
     function navigateHome() {
       state.currentUser = null;
       hideAllSections();
-      const loginSection = document.getElementById('section-login');
-      if (loginSection) loginSection.classList.remove('hidden');
+      document.getElementById('section-login')?.classList.remove('hidden');
       updateNavUserBadge();
     }
 
@@ -1690,10 +1690,8 @@
     }
 
     function hideAllSections() {
-      const ids = ['section-login', 'section-owner', 'section-checker', 'section-guest'];
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
+      ['section-login', 'section-owner', 'section-checker', 'section-guest'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
       });
     }
 
@@ -1702,8 +1700,6 @@
       const tabChecker = document.getElementById('tab-btn-checker');
       const formOwner = document.getElementById('form-login-owner');
       const formChecker = document.getElementById('form-login-checker');
-
-      if (!tabOwner || !tabChecker || !formOwner || !formChecker) return;
 
       if (tab === 'owner') {
         tabOwner.className = 'flex-1 py-2 rounded-lg font-bold text-xs bg-white text-slate-800 shadow-sm';
@@ -1721,31 +1717,22 @@
     function renderAppByRole() {
       hideAllSections();
       updateNavUserBadge();
-
-      if (!state.currentUser) {
-        navigateHome();
-        return;
-      }
+      if (!state.currentUser) { navigateHome(); return; }
 
       if (state.currentUser.role === 'OWNER') {
-        const el = document.getElementById('section-owner');
-        if (el) el.classList.remove('hidden');
+        document.getElementById('section-owner').classList.remove('hidden');
         switchOwnerSubTab('devices');
         renderOwnerDeviceTable();
         renderOwnerQRTable();
         refreshReportDashboard();
         renderCheckerAccountList();
       } else if (state.currentUser.role === 'CHECKER') {
-        const el = document.getElementById('section-checker');
-        if (el) el.classList.remove('hidden');
-        const badge = document.getElementById('checker-current-cycle-badge');
-        if (badge) badge.textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
+        document.getElementById('section-checker').classList.remove('hidden');
+        document.getElementById('checker-current-cycle-badge').textContent = `Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}`;
         renderCheckerPendingDevices();
-        const card = document.getElementById('checksheet-form-card');
-        if (card) card.classList.add('hidden');
+        document.getElementById('checksheet-form-card').classList.add('hidden');
       } else if (state.currentUser.role === 'GUEST') {
-        const el = document.getElementById('section-guest');
-        if (el) el.classList.remove('hidden');
+        document.getElementById('section-guest').classList.remove('hidden');
         refreshGuestDashboard();
       }
     }
@@ -1753,10 +1740,7 @@
     function updateNavUserBadge() {
       const badgeContainer = document.getElementById('nav-user-badge');
       if (!badgeContainer) return;
-      if (!state.currentUser) {
-        badgeContainer.innerHTML = '';
-        return;
-      }
+      if (!state.currentUser) { badgeContainer.innerHTML = ''; return; }
       badgeContainer.innerHTML = `
         <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
           <span class="w-2 h-2 rounded-full ${state.currentUser.role === 'OWNER' ? 'bg-indigo-500' : state.currentUser.role === 'CHECKER' ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
@@ -1769,13 +1753,12 @@
     }
 
     /* ========================================================
-       OWNER SUBSYSTEM
+       OWNER SUBSYSTEM & DEVICE CONFIG (BÁNH RĂNG)
        ======================================================== */
     let ownerEditingDeviceCode = null;
 
     function switchOwnerSubTab(tabName) {
-      const tabs = ['devices', 'qr', 'reports', 'accounts'];
-      tabs.forEach(t => {
+      ['devices', 'qr', 'reports', 'accounts'].forEach(t => {
         const btn = document.getElementById(`owner-subtab-${t}`);
         const content = document.getElementById(`owner-view-${t}`);
         if (btn && content) {
@@ -1788,12 +1771,8 @@
           }
         }
       });
-
-      if (tabName === 'reports') {
-        refreshReportDashboard();
-      } else if (tabName === 'qr') {
-        renderOwnerQRTable();
-      }
+      if (tabName === 'reports') refreshReportDashboard();
+      if (tabName === 'qr') renderOwnerQRTable();
     }
 
     function getDeviceTypeBadgeClass(type) {
@@ -1802,7 +1781,184 @@
       if (type === 'Họng chữa cháy') return 'bg-rose-100 text-rose-800 border border-rose-200';
       if (type === 'Chuông/ đèn/ còi báo cháy' || type === 'Chuông đèn còi báo cháy') return 'bg-orange-100 text-orange-800 border border-orange-200';
       if (type === 'Tủ báo cháy') return 'bg-purple-100 text-purple-800 border border-purple-200';
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+      if (type === 'Quạt hút khói') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+      return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
+    }
+
+    function syncDeviceTypeDropdowns() {
+      const types = state.deviceTypes && state.deviceTypes.length > 0 ? state.deviceTypes : DEFAULT_DEVICE_TYPES;
+      const filterEl = document.getElementById('owner-filter-type');
+      const formEl = document.getElementById('form-device-type');
+
+      if (filterEl) {
+        const prev = filterEl.value;
+        filterEl.innerHTML = '<option value="">Tất cả loại thiết bị</option>' +
+          types.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+        if (types.includes(prev)) filterEl.value = prev;
+      }
+
+      if (formEl) {
+        const prev = formEl.value;
+        formEl.innerHTML = types.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+        if (types.includes(prev)) formEl.value = prev;
+      }
+    }
+
+    function openDeviceConfigModal() {
+      if (!state.deviceTypes.includes(state.configSelectedType)) {
+        state.configSelectedType = state.deviceTypes[0] || '';
+      }
+      renderDeviceConfigModalContent();
+      const modal = document.getElementById('modal-device-config');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeviceConfigModal() {
+      const modal = document.getElementById('modal-device-config');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderDeviceConfigModalContent() {
+      const body = document.getElementById('device-config-modal-body');
+      if (!body) return;
+
+      const selectedType = state.configSelectedType || state.deviceTypes[0] || '';
+      const currentItems = state.checklistTemplates[selectedType] || [];
+
+      body.innerHTML = `
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div class="font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+            <i class="fas fa-layer-group text-indigo-600"></i> 1. Danh sách Loại Thiết Bị (${state.deviceTypes.length})
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="cfg-new-device-type" onkeydown="if(event.key==='Enter') addCustomDeviceType()" placeholder="Nhập tên loại thiết bị mới (VD: Đầu báo khói, Máy bơm PCCC)..." class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+            <button type="button" onclick="addCustomDeviceType()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm shrink-0">
+              <i class="fas fa-plus mr-1"></i> Thêm loại
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            ${state.deviceTypes.map((t, idx) => {
+              const isSelected = t === selectedType;
+              const safeType = escapeHtml(t).replace(/'/g, "\\'");
+              return `
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'}" onclick="selectConfigDeviceType('${safeType}')">
+                  <span>${escapeHtml(t)}</span>
+                  ${state.deviceTypes.length > 1 ? `
+                    <button type="button" onclick="event.stopPropagation(); deleteCustomDeviceType(${idx})" class="ml-1 ${isSelected ? 'text-indigo-200 hover:text-white' : 'text-slate-400 hover:text-rose-600'}" title="Xóa loại này">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="font-extrabold text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
+              <i class="fas fa-list-check text-indigo-600"></i> 2. Hạng mục Checksheet: <span class="text-indigo-700 underline">${escapeHtml(selectedType)}</span>
+            </div>
+            <button type="button" onclick="addChecklistItemToConfig()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] shadow-sm">
+              + Thêm hạng mục kiểm tra
+            </button>
+          </div>
+          <div class="space-y-2">
+            ${currentItems.length === 0 ? `
+              <div class="p-4 text-center text-slate-500 bg-white rounded-xl border border-dashed border-slate-300">
+                Chưa có hạng mục kiểm tra nào. Bấm "+ Thêm hạng mục kiểm tra".
+              </div>
+            ` : currentItems.map((item, idx) => `
+              <div class="flex items-center gap-2">
+                <span class="w-6 text-center font-bold text-slate-400">${idx + 1}.</span>
+                <input type="text" value="${escapeHtml(item)}" oninput="updateChecklistItemInConfig(${idx}, this.value)" class="flex-1 bg-white border border-indigo-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="button" onclick="removeChecklistItemFromConfig(${idx})" class="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600" title="Xóa hạng mục">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function selectConfigDeviceType(typeName) {
+      state.configSelectedType = typeName;
+      renderDeviceConfigModalContent();
+    }
+
+    function addCustomDeviceType() {
+      const val = (document.getElementById('cfg-new-device-type')?.value || '').trim();
+      if (!val) { showToast('Vui lòng nhập tên loại thiết bị mới!', true); return; }
+      if (state.deviceTypes.some(t => t.toLowerCase() === val.toLowerCase())) {
+        showToast('Loại thiết bị này đã tồn tại!', true);
+        return;
+      }
+      state.deviceTypes.push(val);
+      state.checklistTemplates[val] = [
+        '1. Vị trí lắp đặt đúng quy định, dễ tiếp cận',
+        '2. Ngoại quan thiết bị sạch sẽ, nguyên vẹn',
+        '3. Tình trạng vận hành / kiểm định đạt yêu cầu'
+      ];
+      state.configSelectedType = val;
+      syncDeviceTypeDropdowns();
+      renderDeviceConfigModalContent();
+      showToast(`Đã thêm loại thiết bị "${val}". Bấm Lưu Cài Đặt để đồng bộ!`);
+    }
+
+    function deleteCustomDeviceType(idx) {
+      const targetType = state.deviceTypes[idx];
+      if (!targetType) return;
+      if (state.devices.some(d => d.type === targetType)) {
+        showToast(`Không thể xóa "${targetType}" vì đang có thiết bị sử dụng loại này!`, true);
+        return;
+      }
+      state.deviceTypes.splice(idx, 1);
+      delete state.checklistTemplates[targetType];
+      if (state.configSelectedType === targetType) {
+        state.configSelectedType = state.deviceTypes[0] || '';
+      }
+      syncDeviceTypeDropdowns();
+      renderDeviceConfigModalContent();
+    }
+
+    function addChecklistItemToConfig() {
+      const t = state.configSelectedType;
+      if (!t) return;
+      if (!Array.isArray(state.checklistTemplates[t])) state.checklistTemplates[t] = [];
+      const nextNum = state.checklistTemplates[t].length + 1;
+      state.checklistTemplates[t].push(`${nextNum}. Hạng mục kiểm tra mới...`);
+      renderDeviceConfigModalContent();
+    }
+
+    function updateChecklistItemInConfig(idx, val) {
+      const t = state.configSelectedType;
+      if (t && Array.isArray(state.checklistTemplates[t])) state.checklistTemplates[t][idx] = val;
+    }
+
+    function removeChecklistItemFromConfig(idx) {
+      const t = state.configSelectedType;
+      if (t && Array.isArray(state.checklistTemplates[t])) {
+        state.checklistTemplates[t].splice(idx, 1);
+        renderDeviceConfigModalContent();
+      }
+    }
+
+    async function saveDeviceConfigToCloud() {
+      try {
+        Object.keys(state.checklistTemplates).forEach(k => {
+          state.checklistTemplates[k] = (state.checklistTemplates[k] || []).map(s => String(s).trim()).filter(Boolean);
+        });
+        await cloudSaveDeviceConfig();
+        syncDeviceTypeDropdowns();
+        refreshReportDashboard();
+        closeDeviceConfigModal();
+        showToast('Đã lưu cài đặt Loại thiết bị & Mẫu Checksheet lên Supabase!');
+      } catch (err) {
+        showToast('Lỗi lưu cài đặt: ' + err.message, true);
+      }
     }
 
     function renderOwnerDeviceTable() {
@@ -1810,11 +1966,11 @@
       if (!tbody) return;
       tbody.innerHTML = '';
 
-      const filterType = document.getElementById('owner-filter-type') ? document.getElementById('owner-filter-type').value : '';
-      const filterWorkshop = document.getElementById('owner-filter-workshop') ? document.getElementById('owner-filter-workshop').value : '';
-      const searchKey = document.getElementById('owner-search-code') ? document.getElementById('owner-search-code').value.trim().toLowerCase() : '';
+      const filterType = document.getElementById('owner-filter-type')?.value || '';
+      const filterWorkshop = document.getElementById('owner-filter-workshop')?.value || '';
+      const searchKey = (document.getElementById('owner-search-code')?.value || '').trim().toLowerCase();
 
-      let filtered = state.devices.filter(d => {
+      const filtered = state.devices.filter(d => {
         const matchType = !filterType || d.type === filterType;
         const matchWorkshop = !filterWorkshop || d.workshop === filterWorkshop;
         const matchSearch = !searchKey || d.code.toLowerCase().includes(searchKey) || d.location.toLowerCase().includes(searchKey);
@@ -1822,36 +1978,30 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">Không tìm thấy thiết bị nào phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">Chưa có thiết bị nào. Bấm "Thêm Thiết Bị PCCC" để tạo mới.</td></tr>`;
         return;
       }
 
       filtered.forEach(dev => {
+        const safeCode = escapeHtml(dev.code).replace(/'/g, "\\'");
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 text-xs';
-        const safeCodeAttr = escapeHtml(dev.code).replace(/'/g, "\\'");
         tr.innerHTML = `
           <td class="py-3 px-3">
-            <span class="px-2 py-1 rounded-md text-[11px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">
-              ${escapeHtml(dev.type)}
-            </span>
+            <span class="px-2 py-1 rounded-md text-[11px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${escapeHtml(dev.type)}</span>
           </td>
           <td class="py-3 px-3 font-mono font-bold text-slate-800">${escapeHtml(dev.code)}</td>
           <td class="py-3 px-3 font-semibold text-slate-700">${escapeHtml(dev.workshop)}</td>
           <td class="py-3 px-3 text-slate-600">${escapeHtml(dev.location)}</td>
           <td class="py-3 px-3 text-center">
             <div class="flex items-center justify-center gap-2">
-              <button onclick="openEditDeviceModal('${safeCodeAttr}')" class="text-indigo-600 hover:text-indigo-800 font-bold p-1" title="Chỉnh sửa">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button onclick="openDeleteDeviceModal('${safeCodeAttr}')" class="text-rose-500 hover:text-rose-700 font-bold p-1" title="Xóa thiết bị">
-                <i class="fas fa-trash-alt"></i>
-              </button>
+              <button onclick="openEditDeviceModal('${safeCode}')" class="text-indigo-600 hover:text-indigo-800 font-bold p-1" title="Chỉnh sửa"><i class="fas fa-edit"></i></button>
+              <button onclick="deleteDevice('${safeCode}')" class="text-rose-500 hover:text-rose-700 font-bold p-1" title="Xóa thiết bị"><i class="fas fa-trash-alt"></i></button>
             </div>
           </td>
           <td class="py-3 px-3 text-[11px] text-slate-500">${escapeHtml(dev.history || 'Đã tạo')}</td>
           <td class="py-3 px-3 text-center">
-            <button onclick="openDeviceHistoryModal('${safeCodeAttr}')" class="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors inline-flex items-center justify-center" title="Xem lịch sử checksheet">
+            <button onclick="openDeviceHistoryModal('${safeCode}')" class="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors inline-flex items-center justify-center" title="Xem lịch sử checksheet">
               <i class="fas fa-eye text-sm"></i>
             </button>
           </td>
@@ -1864,11 +2014,7 @@
       const dev = state.devices.find(d => d.code === code);
       if (!dev) return;
 
-      const devInfoEl = document.getElementById('history-modal-device-info');
-      const listEl = document.getElementById('history-modal-inspections-list');
-      if (!devInfoEl || !listEl) return;
-
-      devInfoEl.innerHTML = `
+      document.getElementById('history-modal-device-info').innerHTML = `
         <div class="flex items-center justify-between">
           <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${escapeHtml(dev.type)}</span>
           <span class="font-mono font-bold text-slate-800">${escapeHtml(dev.code)}</span>
@@ -1877,13 +2023,9 @@
       `;
 
       const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
-
+      const listEl = document.getElementById('history-modal-inspections-list');
       if (devInspections.length === 0) {
-        listEl.innerHTML = `
-          <div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">
-            Chưa có lịch sử kiểm tra định kỳ cho thiết bị này.
-          </div>
-        `;
+        listEl.innerHTML = `<div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">Chưa có lịch sử kiểm tra định kỳ cho thiết bị này.</div>`;
       } else {
         listEl.innerHTML = devInspections.map(ins => `
           <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'} flex gap-3 text-xs">
@@ -1914,20 +2056,21 @@
     }
 
     function openAddDeviceModal() {
+      syncDeviceTypeDropdowns();
       ownerEditingDeviceCode = null;
       document.getElementById('modal-device-title').textContent = 'Thêm Thiết Bị PCCC Mới';
-      document.getElementById('form-device-type').value = 'Bình bột ABC';
+      document.getElementById('form-device-type').value = state.deviceTypes[0] || 'Bình bột ABC';
       document.getElementById('form-device-code').value = '';
       document.getElementById('form-device-code').disabled = false;
       document.getElementById('form-device-workshop').value = 'Xưởng 1';
       document.getElementById('form-device-location').value = '';
-
       const modal = document.getElementById('modal-device-form');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
 
     function openEditDeviceModal(code) {
+      syncDeviceTypeDropdowns();
       const dev = state.devices.find(d => d.code === code);
       if (!dev) return;
       ownerEditingDeviceCode = code;
@@ -1937,7 +2080,6 @@
       document.getElementById('form-device-code').disabled = true;
       document.getElementById('form-device-workshop').value = dev.workshop;
       document.getElementById('form-device-location').value = dev.location;
-
       const modal = document.getElementById('modal-device-form');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -1956,11 +2098,7 @@
       const workshop = document.getElementById('form-device-workshop').value;
       const location = document.getElementById('form-device-location').value.trim();
 
-      if (!code || !location) {
-        showToast('Vui lòng điền đầy đủ mã và vị trí thiết bị!', true);
-        return;
-      }
-
+      if (!code || !location) { showToast('Vui lòng điền đầy đủ mã và vị trí thiết bị!', true); return; }
       const dateStr = new Date().toLocaleDateString('vi-VN');
 
       try {
@@ -1975,23 +2113,15 @@
             showToast('Đã lưu thay đổi thiết bị!');
           }
         } else {
-          const exists = state.devices.some(d => d.code.toLowerCase() === code.toLowerCase());
-          if (exists) {
+          if (state.devices.some(d => d.code.toLowerCase() === code.toLowerCase())) {
             showToast('Mã thiết bị này đã tồn tại trong hệ thống!', true);
             return;
           }
-          const newDev = {
-            type,
-            code,
-            workshop,
-            location,
-            history: `Tạo mới bởi OWNER (${dateStr})`
-          };
+          const newDev = { type, code, workshop, location, history: `Tạo mới bởi OWNER (${dateStr})` };
           state.devices.push(newDev);
           await cloudSaveDevice(newDev);
           showToast('Thêm mới thiết bị thành công!');
         }
-
         closeDeviceModal();
         renderOwnerDeviceTable();
         renderOwnerQRTable();
@@ -2001,33 +2131,29 @@
       }
     }
 
-    function openDeleteDeviceModal(code) {
-      const safeCodeAttr = escapeHtml(code).replace(/'/g, "\\'");
-      openCustomDialog('Xác Nhận Xóa Thiết Bị', `
-        <p class="text-slate-600">Bạn có chắc chắn muốn xóa thiết bị <b class="font-mono text-slate-900">${escapeHtml(code)}</b> khỏi hệ thống?</p>
-        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-          <button onclick="closeCustomDialog()" class="px-4 py-2 font-bold text-slate-500">Hủy</button>
-          <button onclick="confirmDeleteDevice('${safeCodeAttr}')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg shadow">Xóa Thiết Bị</button>
-        </div>
-      `);
-    }
-
-    async function confirmDeleteDevice(code) {
-      try {
-        state.devices = state.devices.filter(d => d.code !== code);
-        await cloudDeleteDevice(code);
-        closeCustomDialog();
-        renderOwnerDeviceTable();
-        renderOwnerQRTable();
-        refreshReportDashboard();
-        showToast(`Đã xóa thiết bị ${code}`);
-      } catch (err) {
-        showToast('Lỗi xóa thiết bị: ' + err.message, true);
-      }
+    function deleteDevice(code) {
+      openActionDialog({
+        title: 'Xóa thiết bị PCCC',
+        message: `Bạn có chắc chắn muốn xóa thiết bị "${code}" khỏi danh sách?`,
+        confirmText: 'Xóa thiết bị',
+        isDanger: true,
+        onConfirm: async () => {
+          try {
+            state.devices = state.devices.filter(d => d.code !== code);
+            await cloudDeleteDevice(code);
+            renderOwnerDeviceTable();
+            renderOwnerQRTable();
+            refreshReportDashboard();
+            showToast(`Đã xóa thiết bị ${code}`);
+          } catch (err) {
+            showToast('Lỗi xóa thiết bị: ' + err.message, true);
+          }
+        }
+      });
     }
 
     /* ========================================================
-       QR MANAGEMENT: HIỂN THỊ, IN TEM A4 (CÁCH 1) & XUẤT XLSX
+       QR MANAGEMENT, IN 12 TEM/A4 DỌC & XUẤT EXCEL (.XLSX)
        ======================================================== */
     function renderOwnerQRTable() {
       const container = document.getElementById('owner-qr-cards-grid');
@@ -2036,10 +2162,15 @@
       if (!container) return;
       container.innerHTML = '';
 
-      state.devices.forEach((dev, index) => {
+      if (state.devices.length === 0) {
+        container.innerHTML = `<div class="col-span-full p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">Chưa có thiết bị nào để hiển thị mã QR.</div>`;
+        return;
+      }
+
+      state.devices.forEach(dev => {
         const card = document.createElement('div');
         card.className = 'bg-white p-3.5 rounded-2xl border border-slate-200/90 flex items-center justify-between gap-3 shadow-sm hover:shadow transition-all';
-        const qrId = 'qr_tag_' + index + '_' + dev.code.replace(/[^a-zA-Z0-9]/g, '_');
+        const qrId = 'qr_tag_' + dev.code.replace(/[^a-zA-Z0-9]/g, '_');
         card.innerHTML = `
           <div class="space-y-1 flex-1 min-w-0 pr-1">
             <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-sky-100 text-sky-700 border border-sky-200/60 leading-tight">
@@ -2060,18 +2191,13 @@
           const el = document.getElementById(qrId);
           if (el && typeof QRCode !== 'undefined') {
             el.innerHTML = '';
-            new QRCode(el, {
-              text: dev.code,
-              width: 58,
-              height: 58,
-              correctLevel: QRCode.CorrectLevel.M
-            });
+            new QRCode(el, { text: dev.code, width: 58, height: 58, correctLevel: QRCode.CorrectLevel.M });
           }
-        }, 30);
+        }, 40);
       });
     }
 
-    function generateQRCodeDataUrl(text, size = 160) {
+    function generateQRCodeDataUrl(text, size = 240) {
       return new Promise((resolve) => {
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'fixed';
@@ -2079,21 +2205,13 @@
         tempDiv.style.top = '-9999px';
         document.body.appendChild(tempDiv);
         try {
-          new QRCode(tempDiv, {
-            text: text,
-            width: size,
-            height: size,
-            correctLevel: QRCode.CorrectLevel.M
-          });
+          new QRCode(tempDiv, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
           setTimeout(() => {
             const canvas = tempDiv.querySelector('canvas');
             const img = tempDiv.querySelector('img');
             let dataUrl = '';
-            if (canvas) {
-              dataUrl = canvas.toDataURL('image/png');
-            } else if (img && img.src && img.src.startsWith('data:image')) {
-              dataUrl = img.src;
-            }
+            if (canvas) dataUrl = canvas.toDataURL('image/png');
+            else if (img && img.src) dataUrl = img.src;
             document.body.removeChild(tempDiv);
             resolve(dataUrl);
           }, 30);
@@ -2104,127 +2222,84 @@
       });
     }
 
-    /**
-     * CÁCH 1: Mở khung xem trước & In trực tiếp / Xuất PDF chuẩn A4 Dọc
-     * Tự động chia đúng 12 mã tem QR trên mỗi trang A4 (3 cột × 4 hàng),
-     * mỗi ô gồm mã QR lớn chiếm 2/3 phía trên và 3 dòng thông tin ở 1/3 phía dưới.
-     */
     async function openPrintQRLabelsModal() {
       if (state.devices.length === 0) {
         showToast('Chưa có thiết bị nào để in tem QR!', true);
         return;
       }
 
-      showToast('Đang căn chỉnh 12 mã / trang A4...');
-      const gridContainer = document.getElementById('qr-print-grid-container');
-      const countEl = document.getElementById('qr-print-count');
-      const pagesEl = document.getElementById('qr-print-pages');
-      const PAGE_SIZE = 12; // Cố định 12 tem / 1 trang A4 Dọc (3 cột × 4 hàng)
-      const totalPages = Math.ceil(state.devices.length / PAGE_SIZE);
+      const modal = document.getElementById('modal-print-qr');
+      const pagesContainer = document.getElementById('print-qr-pages-container');
+      const subtitle = document.getElementById('print-qr-subtitle');
 
-      if (countEl) countEl.textContent = state.devices.length;
-      if (pagesEl) pagesEl.textContent = totalPages;
-      if (gridContainer) gridContainer.innerHTML = '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      subtitle.textContent = `Đang vẽ ${state.devices.length} mã QR độ phân giải cao...`;
+      pagesContainer.innerHTML = `<div class="p-10 text-center text-slate-600 text-xs font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Đang chuẩn bị trang in chuẩn 12 mã / trang A4 Dọc...</div>`;
 
-      const qrDataUrls = [];
+      const prepared = [];
       for (const dev of state.devices) {
-        qrDataUrls.push(await generateQRCodeDataUrl(dev.code, 240));
+        const qrDataUrl = await generateQRCodeDataUrl(dev.code, 240);
+        prepared.push({ ...dev, qrDataUrl });
       }
 
-      const pagesHtml = [];
-      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-        const start = pageIndex * PAGE_SIZE;
-        const pageDevices = state.devices.slice(start, start + PAGE_SIZE);
+      const PER_PAGE = 12;
+      const totalPages = Math.ceil(prepared.length / PER_PAGE);
+      let pagesHtml = '';
 
-        const cardsHtml = pageDevices.map((dev, idx) => {
-          const qrDataUrl = qrDataUrls[start + idx];
-          return `
-            <div class="qr-print-card">
-              <div class="qr-print-qr-zone">
-                <div class="qr-print-img-box">
-                  ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR ${escapeHtml(dev.code)}" />` : '<span style="font-size:10px;color:#94a3b8;">QR</span>'}
-                </div>
-              </div>
-              <div class="qr-print-info">
-                <div class="qr-print-type">${escapeHtml(dev.type)}</div>
-                <div class="qr-print-code">${escapeHtml(dev.code)}</div>
-                <div class="qr-print-loc">${escapeHtml(dev.workshop)} - ${escapeHtml(dev.location)}</div>
-              </div>
+      for (let p = 0; p < totalPages; p++) {
+        const chunk = prepared.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+        let cardsHtml = chunk.map(item => `
+          <div class="qr-print-card">
+            <div class="qr-print-top">
+              ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" alt="QR ${escapeHtml(item.code)}">` : ''}
             </div>
-          `;
-        }).join('');
-
-        pagesHtml.push(`
-          <div class="qr-a4-page-wrapper">
-            <div class="qr-page-label text-xs font-bold text-slate-600 mb-1.5 flex items-center justify-between px-1">
-              <span>Trang ${pageIndex + 1} / ${totalPages} (Khổ A4 Dọc — ${pageDevices.length}/12 tem)</span>
-              <span class="text-[11px] text-slate-400">QR chiếm 2/3 ô • Tự động ngắt trang khi in</span>
-            </div>
-            <div class="qr-a4-page">
-              ${cardsHtml}
+            <div class="qr-print-bottom">
+              <div class="qr-print-type">${escapeHtml(item.type)}</div>
+              <div class="qr-print-code">${escapeHtml(item.code)}</div>
+              <div class="qr-print-loc">${escapeHtml(item.workshop)} - ${escapeHtml(item.location)}</div>
             </div>
           </div>
-        `);
+        `).join('');
+
+        for (let e = chunk.length; e < PER_PAGE; e++) {
+          cardsHtml += `<div class="qr-print-card qr-print-card-empty"></div>`;
+        }
+        pagesHtml += `<div class="qr-a4-page">${cardsHtml}</div>`;
       }
 
-      if (gridContainer) {
-        gridContainer.innerHTML = pagesHtml.join('');
-      }
-
-      const modal = document.getElementById('modal-qr-print-preview');
-      if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      }
+      pagesContainer.innerHTML = pagesHtml;
+      subtitle.textContent = `Tổng ${prepared.length} tem • Tự động chia ${totalPages} trang A4 Dọc (12 mã/trang, QR chiếm 2/3 ô)`;
     }
 
     function closePrintQRLabelsModal() {
-      const modal = document.getElementById('modal-qr-print-preview');
-      if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-      }
+      const modal = document.getElementById('modal-print-qr');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
 
-    /**
-     * Xuất danh sách thiết bị ra file Excel chuẩn (.xlsx) bằng thư viện SheetJS
-     */
-    function exportDevicesListToExcelXlsx() {
+    function exportDevicesListToExcel() {
       try {
-        if (state.devices.length === 0) {
-          showToast('Chưa có thiết bị nào để xuất file Excel!', true);
-          return;
-        }
-        if (typeof XLSX === 'undefined') {
-          showToast('Thư viện SheetJS chưa tải xong, vui lòng thử lại!', true);
-          return;
-        }
+        if (state.devices.length === 0) { showToast('Chưa có thiết bị nào để xuất!', true); return; }
+        if (typeof XLSX === 'undefined') { showToast('Thư viện Excel đang tải, vui lòng thử lại!', true); return; }
 
-        const rows = state.devices.map((dev, idx) => ({
+        const rows = state.devices.map((d, idx) => ({
           'STT': idx + 1,
-          'Loại thiết bị': dev.type,
-          'Mã thiết bị (QR)': dev.code,
-          'Xưởng': dev.workshop,
-          'Vị trí cụ thể': dev.location,
-          'Lịch sử cập nhật': dev.history || ''
+          'Loại thiết bị': d.type,
+          'Mã thiết bị': d.code,
+          'Xưởng': d.workshop,
+          'Vị trí cụ thể': d.location,
+          'Lịch sử': d.history || ''
         }));
 
         const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [
-          { wch: 6 },
-          { wch: 26 },
-          { wch: 26 },
-          { wch: 12 },
-          { wch: 34 },
-          { wch: 28 }
-        ];
-
+        ws['!cols'] = [{ wch: 6 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 35 }, { wch: 28 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Danh_Sach_PCCC');
 
         const now = new Date();
         const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-        XLSX.writeFile(wb, `EHS_BOYD_EATON_DS_PCCC_${dateStr}.xlsx`);
+        XLSX.writeFile(wb, `EHS_BOYD_Danh_Sach_PCCC_${dateStr}.xlsx`);
         showToast('Đã xuất danh sách thiết bị Excel (.xlsx) thành công!');
       } catch (err) {
         showToast('Lỗi xuất file Excel: ' + err.message, true);
@@ -2232,43 +2307,243 @@
     }
 
     /* ========================================================
-       REPORT & DASHBOARD VIEW (SHARED OWNER & GUEST TOTAL)
+       QUẢN LÝ LƯU TRỮ (% DUNG LƯỢNG) & DỌN ẢNH CŨ THEO THÁNG/NĂM
+       ======================================================== */
+    function openStorageManagerModal() {
+      const modal = document.getElementById('modal-cleanup-photos');
+      if (!modal) return;
+      renderStorageUsageOverview();
+      updateCleanupPhotosPreview();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCleanupPhotosModal() {
+      const modal = document.getElementById('modal-cleanup-photos');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderStorageUsageOverview() {
+      const container = document.getElementById('storage-usage-overview');
+      if (!container) return;
+
+      const STORAGE_LIMIT_MB = 1024;
+      const photoInspections = state.inspections.filter(i => i.photo && i.photo.trim() !== '');
+      let totalPhotoKB = 0;
+      photoInspections.forEach(i => {
+        if (i.photo.startsWith('data:image')) totalPhotoKB += Math.round((i.photo.length * 0.75) / 1024);
+        else if (i.photo.includes('/pccc-photos/')) totalPhotoKB += 60;
+        else totalPhotoKB += 25;
+      });
+      const usedStorageMB = totalPhotoKB / 1024;
+      const storagePct = Math.min(100, (usedStorageMB / STORAGE_LIMIT_MB) * 100);
+      const storageBarColor = storagePct >= 85 ? 'bg-rose-500' : storagePct >= 65 ? 'bg-amber-500' : 'bg-emerald-500';
+      const storageTextColor = storagePct >= 85 ? 'text-rose-600' : storagePct >= 65 ? 'text-amber-600' : 'text-emerald-600';
+
+      const DB_LIMIT_MB = 500;
+      const approxJsonBytes =
+        JSON.stringify(state.devices).length +
+        JSON.stringify(state.checkers).length +
+        JSON.stringify(state.inspections.map(i => ({ ...i, photo: i.photo ? 'url' : '' }))).length;
+      const usedDbMB = Math.max(0.05, (approxJsonBytes * 2.5) / (1024 * 1024));
+      const dbPct = Math.min(100, (usedDbMB / DB_LIMIT_MB) * 100);
+
+      const byMonth = {};
+      photoInspections.forEach(i => {
+        const key = `${String(i.month).padStart(2, '0')}/${i.year}`;
+        byMonth[key] = (byMonth[key] || 0) + 1;
+      });
+      const monthEntries = Object.entries(byMonth).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-slate-700 flex items-center gap-1.5">
+                <i class="fas fa-images text-indigo-500"></i> Kho Ảnh (1 GB)
+              </span>
+              <span class="text-sm font-black ${storageTextColor}">${storagePct.toFixed(1)}%</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div style="width: ${Math.max(storagePct, photoInspections.length > 0 ? 2 : 0)}%" class="h-full ${storageBarColor} rounded-full transition-all duration-500"></div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span><b>${usedStorageMB.toFixed(2)} MB</b> / 1,024 MB</span>
+              <span><b>${photoInspections.length}</b> ảnh</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-slate-700 flex items-center gap-1.5">
+                <i class="fas fa-database text-emerald-600"></i> Database (500 MB)
+              </span>
+              <span class="text-sm font-black text-emerald-600">${dbPct.toFixed(2)}%</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div style="width: ${Math.max(dbPct, 1)}%" class="h-full bg-emerald-500 rounded-full transition-all duration-500"></div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span><b>${usedDbMB.toFixed(2)} MB</b> / 500 MB</span>
+              <span><b>${state.inspections.length}</b> lượt check</span>
+            </div>
+          </div>
+        </div>
+
+        ${monthEntries.length > 0 ? `
+          <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span class="text-slate-500 font-semibold mr-1">Ảnh theo tháng:</span>
+            ${monthEntries.map(([mKey, cnt]) => `
+              <span class="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold">
+                T${escapeHtml(mKey)}: ${cnt} ảnh (~${((cnt * 60) / 1024).toFixed(1)} MB)
+              </span>
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function getCleanupTargetInspections() {
+      const m = parseInt(document.getElementById('cleanup-select-month')?.value, 10);
+      const y = parseInt(document.getElementById('cleanup-select-year')?.value, 10);
+      return state.inspections.filter(i => parseInt(i.month, 10) === m && parseInt(i.year, 10) === y && i.photo && i.photo.trim() !== '');
+    }
+
+    function updateCleanupPhotosPreview() {
+      const box = document.getElementById('cleanup-preview-box');
+      const btn = document.getElementById('btn-execute-cleanup');
+      if (!box) return;
+      const targets = getCleanupTargetInspections();
+      const estMB = ((targets.length * 60) / 1024).toFixed(2);
+      if (targets.length === 0) {
+        box.innerHTML = `<div class="text-slate-500">Không có ảnh nào cần dọn trong tháng đã chọn.</div>`;
+        if (btn) btn.disabled = true;
+      } else {
+        box.innerHTML = `
+          <div class="font-bold text-slate-800">Tìm thấy <span class="text-rose-600">${targets.length} ảnh</span> trong tháng này</div>
+          <div class="text-[11px] text-slate-500">Dung lượng giải phóng ước tính: <b>~${estMB} MB</b> trên Supabase Storage.</div>
+        `;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function extractSupabaseStoragePath(photoUrl) {
+      if (!photoUrl || !photoUrl.includes('/pccc-photos/')) return null;
+      const parts = photoUrl.split('/pccc-photos/');
+      return parts.length > 1 ? decodeURIComponent(parts[1].split('?')[0]) : null;
+    }
+
+    async function executeCleanupOldPhotos() {
+      const targets = getCleanupTargetInspections();
+      if (targets.length === 0) { showToast('Không có ảnh nào để dọn trong tháng này!', true); return; }
+
+      const m = document.getElementById('cleanup-select-month').value;
+      const y = document.getElementById('cleanup-select-year').value;
+      const shouldZip = document.getElementById('cleanup-download-zip')?.checked;
+      const btn = document.getElementById('btn-execute-cleanup');
+      const progBar = document.getElementById('cleanup-progress-bar');
+      const progText = document.getElementById('cleanup-progress-text');
+
+      btn.disabled = true;
+      progBar.classList.remove('hidden');
+
+      try {
+        if (shouldZip && typeof JSZip !== 'undefined') {
+          progText.textContent = `Đang tải & nén ${targets.length} ảnh thành file ZIP...`;
+          const zip = new JSZip();
+          const imgFolder = zip.folder(`Anh_PCCC_T${m}_${y}`);
+
+          const csvHeader = '\uFEFFID,Ma_Thiet_Bi,Loai,Xuong,Nguoi_Kiem_Tra,Thoi_Gian,Ket_Qua,Ghi_Chu\n';
+          const csvRows = targets.map(i => [i.id, i.deviceCode, i.deviceType, i.workshop, i.checkerName, i.timestamp, i.status, i.notes || '']
+            .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+          zip.file(`Bao_cao_T${m}_${y}.csv`, csvHeader + csvRows);
+
+          for (let idx = 0; idx < targets.length; idx++) {
+            const ins = targets[idx];
+            progText.textContent = `Đang nén ảnh ${idx + 1}/${targets.length}...`;
+            try {
+              const safeName = `${ins.deviceCode.replace(/[^a-zA-Z0-9_-]/g, '_')}_${ins.id}.jpg`;
+              if (ins.photo.startsWith('data:image')) {
+                imgFolder.file(safeName, dataURLtoBlob(ins.photo));
+              } else {
+                const resp = await fetch(ins.photo);
+                if (resp.ok) imgFolder.file(safeName, await resp.blob());
+              }
+            } catch (fetchErr) {
+              console.warn('Skip image fetch:', ins.id, fetchErr);
+            }
+          }
+
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          const url = URL.createObjectURL(zipBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `EHS_BOYD_PCCC_Backup_T${String(m).padStart(2, '0')}_${y}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
+
+        if (isSupabaseReady && supabaseClient) {
+          progText.textContent = 'Đang xóa file ảnh trên Supabase Storage...';
+          const pathsToRemove = targets.map(i => extractSupabaseStoragePath(i.photo)).filter(Boolean);
+          for (let i = 0; i < pathsToRemove.length; i += 100) {
+            const batch = pathsToRemove.slice(i, i + 100);
+            const { error: rmErr } = await supabaseClient.storage.from('pccc-photos').remove(batch);
+            if (rmErr) console.warn('Storage remove warning:', rmErr.message);
+          }
+
+          progText.textContent = 'Đang cập nhật lịch sử Database...';
+          const targetIds = targets.map(i => i.id);
+          const { error: updErr } = await supabaseClient
+            .from('pccc_inspections')
+            .update({ photo: '' })
+            .in('id', targetIds);
+          if (updErr) throw updErr;
+        }
+
+        targets.forEach(ins => { ins.photo = ''; });
+        saveLocalBackup();
+        refreshActiveViews();
+        renderStorageUsageOverview();
+        updateCleanupPhotosPreview();
+        closeCleanupPhotosModal();
+        showToast(`Đã dọn xong ${targets.length} ảnh của Tháng ${m}/${y} (giữ nguyên lịch sử OK/NG)!`);
+      } catch (err) {
+        showToast('Lỗi khi dọn ảnh cũ: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        progBar.classList.add('hidden');
+      }
+    }
+
+    /* ========================================================
+       REPORT & DASHBOARD VIEW (OWNER & AUDITOR)
        ======================================================== */
     function refreshReportDashboard() {
       const mEl = document.getElementById('report-filter-month');
       const yEl = document.getElementById('report-filter-year');
       if (!mEl || !yEl) return;
-      const m = parseInt(mEl.value, 10) || (new Date().getMonth() + 1);
-      const y = parseInt(yEl.value, 10) || new Date().getFullYear();
-      renderDashboardView('report-dashboard-container', m, y);
+      renderDashboardView('report-dashboard-container', parseInt(mEl.value, 10) || (new Date().getMonth() + 1), parseInt(yEl.value, 10) || new Date().getFullYear());
     }
 
     function refreshGuestDashboard() {
       const mEl = document.getElementById('guest-filter-month');
       const yEl = document.getElementById('guest-filter-year');
       if (!mEl || !yEl) return;
-      const m = parseInt(mEl.value, 10) || (new Date().getMonth() + 1);
-      const y = parseInt(yEl.value, 10) || new Date().getFullYear();
-      renderDashboardView('guest-total-dashboard-container', m, y);
+      renderDashboardView('guest-total-dashboard-container', parseInt(mEl.value, 10) || (new Date().getMonth() + 1), parseInt(yEl.value, 10) || new Date().getFullYear());
     }
 
     function renderDashboardView(containerId, targetMonth, targetYear) {
       const container = document.getElementById(containerId);
       if (!container) return;
 
-      const categories = [
-        { type: 'Bình khí CO2', label: 'Bình khí CO2' },
-        { type: 'Bình bột ABC', label: 'Bình bột ABC' },
-        { type: 'Họng chữa cháy', label: 'Họng chữa cháy' },
-        { type: 'Chuông/ đèn/ còi báo cháy', label: 'Chuông/ đèn/ còi báo cháy' },
-        { type: 'Tủ báo cháy', label: 'Tủ báo cháy' },
-        { type: 'Quạt hút khói', label: 'Quạt hút khói' }
-      ];
+      const activeTypes = state.deviceTypes && state.deviceTypes.length > 0 ? state.deviceTypes : DEFAULT_DEVICE_TYPES;
+      const categories = activeTypes.map(t => ({ type: t, label: t }));
 
-      const cycleInspections = state.inspections.filter(i => {
-        return parseInt(i.month, 10) === targetMonth && parseInt(i.year, 10) === targetYear;
-      });
-
+      const cycleInspections = state.inspections.filter(i => parseInt(i.month, 10) === targetMonth && parseInt(i.year, 10) === targetYear);
       const latestInsMap = {};
       cycleInspections.forEach(i => {
         const c = i.deviceCode.toLowerCase();
@@ -2277,10 +2552,8 @@
         }
       });
 
-      let totalAll = state.devices.length;
-      let totalOK = 0;
-      let totalNG = 0;
-      let totalNeedCheck = 0;
+      const totalAll = state.devices.length;
+      let totalOK = 0, totalNG = 0, totalNeedCheck = 0;
 
       const catStats = categories.map(cat => {
         const catDevices = state.devices.filter(d => {
@@ -2290,19 +2563,12 @@
           return d.type === cat.type;
         });
 
-        let okCount = 0;
-        let ngCount = 0;
-        let needCheckCount = 0;
-
+        let okCount = 0, ngCount = 0, needCheckCount = 0;
         catDevices.forEach(d => {
           const ins = latestInsMap[d.code.toLowerCase()];
-          if (!ins) {
-            needCheckCount++;
-          } else if (ins.status === 'OK') {
-            okCount++;
-          } else {
-            ngCount++;
-          }
+          if (!ins) needCheckCount++;
+          else if (ins.status === 'OK') okCount++;
+          else ngCount++;
         });
 
         totalOK += okCount;
@@ -2310,21 +2576,11 @@
         totalNeedCheck += needCheckCount;
 
         const totalCat = catDevices.length;
-        const pctOK = totalCat > 0 ? ((okCount / totalCat) * 100).toFixed(0) : 0;
-        const pctNG = totalCat > 0 ? ((ngCount / totalCat) * 100).toFixed(0) : 0;
-        const pctNeed = totalCat > 0 ? (100 - pctOK - pctNG) : 100;
+        const pctOK = totalCat > 0 ? Math.round((okCount / totalCat) * 100) : 0;
+        const pctNG = totalCat > 0 ? Math.round((ngCount / totalCat) * 100) : 0;
+        const pctNeed = totalCat > 0 ? Math.max(0, 100 - pctOK - pctNG) : 100;
 
-        return {
-          label: cat.label,
-          type: cat.type,
-          total: totalCat,
-          ok: okCount,
-          ng: ngCount,
-          need: needCheckCount,
-          pctOK: Number(pctOK),
-          pctNG: Number(pctNG),
-          pctNeed: Number(pctNeed)
-        };
+        return { label: cat.label, total: totalCat, ok: okCount, ng: ngCount, need: needCheckCount, pctOK, pctNG, pctNeed };
       });
 
       const overallPct = totalAll > 0 ? ((totalOK / totalAll) * 100).toFixed(1) : '0.0';
@@ -2347,17 +2603,10 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hoàn Thành</span>
                 </div>
               </div>
-
               <div class="flex items-center justify-center gap-4 mt-5 text-xs font-bold">
-                <div class="flex items-center gap-1.5 text-emerald-600">
-                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> OK (${totalOK})
-                </div>
-                <div class="flex items-center gap-1.5 text-rose-600">
-                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> NG (${totalNG})
-                </div>
-                <div class="flex items-center gap-1.5 text-amber-500">
-                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Need Check (${totalNeedCheck})
-                </div>
+                <div class="flex items-center gap-1.5 text-emerald-600"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> OK (${totalOK})</div>
+                <div class="flex items-center gap-1.5 text-rose-600"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> NG (${totalNG})</div>
+                <div class="flex items-center gap-1.5 text-amber-500"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Need Check (${totalNeedCheck})</div>
               </div>
             </div>
 
@@ -2370,7 +2619,6 @@
                   <span class="text-amber-500 flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-400"></span> Need Check</span>
                 </div>
               </div>
-
               <div class="space-y-3">
                 ${catStats.map(c => `
                   <div class="space-y-1">
@@ -2379,9 +2627,9 @@
                       <span class="text-slate-400 text-[11px] font-medium">${c.ok}/${c.total} thiết bị (${c.pctOK}%)</span>
                     </div>
                     <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                      <div style="width: ${c.pctOK}%" class="bg-emerald-500 h-full transition-all duration-500" title="OK: ${c.ok}"></div>
-                      <div style="width: ${c.pctNG}%" class="bg-rose-500 h-full transition-all duration-500" title="NG: ${c.ng}"></div>
-                      <div style="width: ${c.pctNeed}%" class="bg-amber-300 h-full transition-all duration-500" title="Need Check: ${c.need}"></div>
+                      <div style="width: ${c.pctOK}%" class="bg-emerald-500 h-full transition-all duration-500"></div>
+                      <div style="width: ${c.pctNG}%" class="bg-rose-500 h-full transition-all duration-500"></div>
+                      <div style="width: ${c.pctNeed}%" class="bg-amber-300 h-full transition-all duration-500"></div>
                     </div>
                   </div>
                 `).join('')}
@@ -2423,42 +2671,35 @@
        ======================================================== */
     function renderCheckerPendingDevices() {
       const container = document.getElementById('checker-pending-devices-list');
-      const wsFilter = document.getElementById('checker-filter-workshop') ? document.getElementById('checker-filter-workshop').value : '';
+      const wsFilter = document.getElementById('checker-filter-workshop')?.value || '';
       if (!container) return;
-
-      const activeMonth = state.checkerActiveMonth;
-      const activeYear = state.checkerActiveYear;
 
       const checkedDeviceCodes = new Set(
         state.inspections
-          .filter(i => parseInt(i.month, 10) === activeMonth && parseInt(i.year, 10) === activeYear)
+          .filter(i => parseInt(i.month, 10) === state.checkerActiveMonth && parseInt(i.year, 10) === state.checkerActiveYear)
           .map(i => i.deviceCode.toLowerCase())
       );
 
-      const pendingDevices = state.devices.filter(d => {
-        const isPending = !checkedDeviceCodes.has(d.code.toLowerCase());
-        const matchWs = !wsFilter || d.workshop === wsFilter;
-        return isPending && matchWs;
-      });
+      const pendingDevices = state.devices.filter(d => !checkedDeviceCodes.has(d.code.toLowerCase()) && (!wsFilter || d.workshop === wsFilter));
 
       if (pendingDevices.length === 0) {
         container.innerHTML = `
           <div class="col-span-full p-6 text-center bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 text-xs">
             <i class="fas fa-check-double text-emerald-600 text-xl mb-1 block"></i>
-            Tuyệt vời! Tất cả thiết bị đã hoàn thành kiểm tra trong Tháng ${activeMonth}/${activeYear}.
+            ${state.devices.length === 0 ? 'Chưa có thiết bị nào trong hệ thống.' : `Tuyệt vời! Tất cả thiết bị đã hoàn thành kiểm tra trong Tháng ${state.checkerActiveMonth}/${state.checkerActiveYear}.`}
           </div>
         `;
         return;
       }
 
       container.innerHTML = pendingDevices.map(d => {
-        const safeCodeAttr = escapeHtml(d.code).replace(/'/g, "\\'");
+        const safeCode = escapeHtml(d.code).replace(/'/g, "\\'");
         return `
-          <div onclick="openCheckerViewModal('${safeCodeAttr}')" class="p-3 bg-white border border-slate-200 hover:border-indigo-400 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs shadow-sm hover:shadow">
+          <div onclick="openCheckerViewModal('${safeCode}')" class="p-3 bg-white border border-slate-200 hover:border-indigo-400 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs shadow-sm hover:shadow">
             <div>
               <div class="font-bold text-slate-800 font-mono flex items-center gap-1.5">
                 ${escapeHtml(d.code)}
-                <i class="fas fa-info-circle text-slate-400 text-[11px]" title="Bấm xem vị trí"></i>
+                <i class="fas fa-info-circle text-slate-400 text-[11px]"></i>
               </div>
               <div class="text-[10px] text-slate-500">${escapeHtml(d.workshop)} • ${escapeHtml(d.location)}</div>
             </div>
@@ -2471,15 +2712,12 @@
     function openCheckerViewModal(code) {
       const dev = state.devices.find(d => d.code === code);
       if (!dev) return;
-
       const typeEl = document.getElementById('cv-device-type');
       typeEl.textContent = dev.type;
       typeEl.className = `px-2 py-0.5 rounded text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}`;
-
       document.getElementById('cv-device-code').textContent = dev.code;
       document.getElementById('cv-device-workshop').textContent = dev.workshop;
       document.getElementById('cv-device-location').textContent = dev.location;
-
       const modal = document.getElementById('modal-checker-view-device');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -2494,8 +2732,6 @@
     function toggleQRScannerModal(show = true, target = 'checker') {
       state.activeScannerTarget = target;
       const modal = document.getElementById('modal-qr-scanner');
-      if (!modal) return;
-
       if (show) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -2508,54 +2744,32 @@
     }
 
     function startCameraQRScanner() {
-      if (typeof Html5Qrcode === 'undefined') {
-        showToast('Trình quét mã QR đang khởi động...', true);
-        return;
-      }
+      if (typeof Html5Qrcode === 'undefined') { showToast('Trình quét mã QR đang khởi động...', true); return; }
       if (state.html5QrCodeScanner) {
-        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => {
-          state.html5QrCodeScanner = null;
-        });
+        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => { state.html5QrCodeScanner = null; });
       }
-
-      const qrRegionId = 'qr-reader';
-      state.html5QrCodeScanner = new Html5Qrcode(qrRegionId);
-      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-
+      state.html5QrCodeScanner = new Html5Qrcode('qr-reader');
       state.html5QrCodeScanner.start(
         { facingMode: 'environment' },
-        config,
-        (decodedText) => {
-          onQRCodeScanned(decodedText);
-        },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decodedText) => onQRCodeScanned(decodedText),
         () => {}
       ).catch(() => {
-        const container = document.getElementById(qrRegionId);
-        if (container) {
-          container.innerHTML = `
-            <div class="p-4 text-center text-xs text-rose-300">
-              Không thể truy cập camera trực tiếp.<br>Vui lòng cấp quyền máy ảnh trên trình duyệt (chạy trên HTTPS).
-            </div>
-          `;
-        }
+        document.getElementById('qr-reader').innerHTML = `<div class="p-4 text-center text-xs text-rose-300">Không thể truy cập camera trực tiếp.<br>Vui lòng cấp quyền máy ảnh trên trình duyệt (chạy trên HTTPS).</div>`;
       });
     }
 
     function stopCameraQRScanner() {
       if (state.html5QrCodeScanner) {
-        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => {
-          state.html5QrCodeScanner = null;
-        });
+        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => { state.html5QrCodeScanner = null; });
       }
     }
 
     function onQRCodeScanned(decodedText) {
       toggleQRScannerModal(false);
       const code = decodedText.trim();
-
-      if (state.activeScannerTarget === 'checker') {
-        openChecksheetForDevice(code);
-      } else {
+      if (state.activeScannerTarget === 'checker') openChecksheetForDevice(code);
+      else {
         document.getElementById('guest-input-code').value = code;
         searchGuestDeviceHistory(code);
       }
@@ -2563,13 +2777,8 @@
 
     function openChecksheetForDevice(code) {
       const dev = state.devices.find(d => d.code === code);
-      if (!dev) {
-        showToast(`Không tìm thấy dữ liệu cho mã ${code}!`, true);
-        return;
-      }
-
+      if (!dev) { showToast(`Không tìm thấy dữ liệu cho mã ${code}!`, true); return; }
       state.currentCheckDevice = dev;
-
       const card = document.getElementById('checksheet-form-card');
       card.classList.remove('hidden');
 
@@ -2583,7 +2792,6 @@
       renderChecklistItems(dev.type);
       removeCapturedPhoto();
       document.getElementById('checksheet-notes').value = '';
-
       card.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -2591,70 +2799,20 @@
       const container = document.getElementById('checksheet-items-list');
       container.innerHTML = '';
 
-      let items = [];
-      if (type === 'Bình bột ABC') {
-        items = [
-          '1. Vị trí đặt bình thông thoáng, dễ thấy, dễ lấy',
-          '2. Đồng hồ đo áp suất (Áp kế) kim chỉ vạch XANH',
-          '3. Chốt niêm phong và kẹp chì còn nguyên vẹn',
-          '4. Vỏ bình nguyên vẹn, không rỉ sét móp méo',
-          '5. Dây vòi phun, loa phun không nứt nẻ tắc nghẽn',
-          '6. Thẻ/tem kiểm định còn hiệu lực'
-        ];
-      } else if (type === 'Bình khí CO2') {
-        items = [
-          '1. Vị trí đặt bình thông thoáng, tránh ánh nắng trực tiếp',
-          '2. Chốt an toàn và dây chì niêm phong nguyên vẹn',
-          '3. Trọng lượng bình đảm bảo (cân nặng không hụt >10%)',
-          '4. Vỏ bình chịu áp lực cao không rỉ sét biến dạng',
-          '5. Cụm loa phun CO2 (loa cứng cách nhiệt) không nứt vỡ',
-          '6. Van xả, cò bóp hoạt động tốt',
-          '7. Tem kiểm định còn hạn sử dụng'
-        ];
-      } else if (type === 'Họng chữa cháy') {
-        items = [
-          '1. Cửa tủ họng PCCC đóng mở trơn tru, kính không vỡ',
-          '2. Cuộn vòi bạt khô ráo, không mốc rách, cuộn đúng kỹ thuật',
-          '3. Khớp nối và đầu lăng phun sáng bóng, gioăng cao su kín',
-          '4. Van góc đóng mở nhẹ nhàng, không rò rỉ nước',
-          '5. Bảng hướng dẫn sử dụng rõ ràng, dễ đọc'
-        ];
-      } else if (type === 'Chuông/ đèn/ còi báo cháy' || type === 'Chuông đèn còi báo cháy') {
-        items = [
-          '1. Nút nhấn khẩn cấp nguyên vẹn, kính/màng bảo vệ tốt',
-          '2. Đèn báo vị trí sáng liên tục',
-          '3. Còi/chuông báo động chắc chắn, không bị che khuất',
-          '4. Không có bụi bẩn hoặc rác quấn quanh cụm thiết bị'
-        ];
-      } else if (type === 'Tủ báo cháy') {
-        items = [
-          '1. Tủ hoạt động ở trạng thái bình thường (Đèn AC Power ON)',
-          '2. Không có báo lỗi Zone hoặc Trouble bất thường',
-          '3. Ắc quy dự phòng điện áp ổn định',
-          '4. Khóa tủ đóng kín, chìa khóa dự phòng tại chỗ'
-        ];
-      } else if (type === 'Quạt hút khói') {
-        items = [
-          '1. Cửa gió tự động mở khi kích hoạt kiểm tra',
-          '2. Động cơ quạt quay êm, không rung giật hoặc kêu lạ',
-          '3. Tủ điều khiển quạt ở chế độ AUTO',
-          '4. Không có vật cản trước cửa gió hút và thổi'
-        ];
-      } else {
-        items = [
-          '1. Vị trí lắp đặt đúng vị trí thiết kế',
-          '2. Ngoại quan thiết bị sạch sẽ, nguyên vẹn',
-          '3. Kiểm tra vận hành cơ bản đạt yêu cầu'
-        ];
-      }
+      const defaultTpls = createDefaultChecklistTemplates();
+      const items = (state.checklistTemplates && state.checklistTemplates[type] && state.checklistTemplates[type].length > 0)
+        ? state.checklistTemplates[type]
+        : (defaultTpls[type] || [
+            '1. Vị trí lắp đặt đúng vị trí thiết kế',
+            '2. Ngoại quan thiết bị sạch sẽ, nguyên vẹn',
+            '3. Kiểm tra vận hành cơ bản đạt yêu cầu'
+          ]);
 
       items.forEach((itemText, idx) => {
         const div = document.createElement('div');
         div.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs';
         div.innerHTML = `
-          <div class="font-medium text-slate-800 flex-1">
-            ${escapeHtml(itemText)} <span class="text-rose-500 font-bold">*</span>
-          </div>
+          <div class="font-medium text-slate-800 flex-1">${escapeHtml(itemText)} <span class="text-rose-500 font-bold">*</span></div>
           <div class="flex items-center gap-2 shrink-0">
             <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-emerald-50">
               <input type="radio" name="check_item_${idx}" value="OK" class="text-emerald-600 focus:ring-emerald-500" required checked>
@@ -2672,28 +2830,21 @@
 
     function triggerCameraCapture() {
       const mobileInput = document.getElementById('camera-file-input');
-      if (mobileInput && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-        mobileInput.click();
-      } else {
-        openWebcamModal();
-      }
+      if (mobileInput && /Mobi|Android|iPhone/i.test(navigator.userAgent)) mobileInput.click();
+      else openWebcamModal();
     }
 
-    function compressImageDataUrl(dataUrl, maxWidth = 1024, quality = 0.78) {
+    // Tối ưu nén ảnh: 640px, quality 0.60 (~50-60 KB/ảnh -> lưu ~1.5 năm miễn phí)
+    function compressImageDataUrl(dataUrl, maxWidth = 640, quality = 0.60) {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-          let w = img.width;
-          let h = img.height;
-          if (w > maxWidth) {
-            h = Math.round((h * maxWidth) / w);
-            w = maxWidth;
-          }
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
           const canvas = document.createElement('canvas');
           canvas.width = w;
           canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           resolve(canvas.toDataURL('image/jpeg', quality));
         };
         img.onerror = () => resolve(dataUrl);
@@ -2704,26 +2855,19 @@
     function handleCameraFileInput(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = async (e) => {
-        const compressed = await compressImageDataUrl(e.target.result);
-        setCapturedPhoto(compressed);
-      };
+      reader.onload = async (e) => setCapturedPhoto(await compressImageDataUrl(e.target.result));
       reader.readAsDataURL(file);
     }
 
     function openWebcamModal() {
       const modal = document.getElementById('modal-webcam');
-      if (!modal) return;
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
         .then(stream => {
           state.webcamStream = stream;
-          const video = document.getElementById('webcam-video');
-          if (video) video.srcObject = stream;
+          document.getElementById('webcam-video').srcObject = stream;
         })
         .catch(() => {
           showToast('Không thể bật WebCam. Vui lòng cấp quyền!', true);
@@ -2733,12 +2877,10 @@
 
     function closeWebcamModal() {
       const modal = document.getElementById('modal-webcam');
-      if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-      }
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
       if (state.webcamStream) {
-        state.webcamStream.getTracks().forEach(track => track.stop());
+        state.webcamStream.getTracks().forEach(t => t.stop());
         state.webcamStream = null;
       }
     }
@@ -2746,97 +2888,60 @@
     async function takeWebcamSnapshot() {
       const video = document.getElementById('webcam-video');
       const canvas = document.getElementById('webcam-canvas');
-      if (!video || !canvas) return;
-
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      const compressed = await compressImageDataUrl(rawDataUrl);
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const compressed = await compressImageDataUrl(canvas.toDataURL('image/jpeg', 0.85));
       setCapturedPhoto(compressed);
       closeWebcamModal();
     }
 
     function setCapturedPhoto(dataUrl) {
       state.capturedPhotoDataUrl = dataUrl;
-      const previewImg = document.getElementById('captured-preview-img');
-      const previewWrapper = document.getElementById('captured-photo-wrapper');
-      const promptBtn = document.getElementById('camera-prompt-btn');
-
-      if (previewImg && previewWrapper && promptBtn) {
-        previewImg.src = dataUrl;
-        previewWrapper.classList.remove('hidden');
-        previewWrapper.classList.add('flex');
-        promptBtn.classList.add('hidden');
-      }
+      document.getElementById('captured-preview-img').src = dataUrl;
+      document.getElementById('captured-photo-wrapper').classList.remove('hidden');
+      document.getElementById('captured-photo-wrapper').classList.add('flex');
+      document.getElementById('camera-prompt-btn').classList.add('hidden');
     }
 
     function removeCapturedPhoto() {
       state.capturedPhotoDataUrl = null;
-      const previewWrapper = document.getElementById('captured-photo-wrapper');
-      const promptBtn = document.getElementById('camera-prompt-btn');
-      const mobileInput = document.getElementById('camera-file-input');
-
-      if (previewWrapper) {
-        previewWrapper.classList.add('hidden');
-        previewWrapper.classList.remove('flex');
-      }
-      if (promptBtn) promptBtn.classList.remove('hidden');
-      if (mobileInput) mobileInput.value = '';
+      document.getElementById('captured-photo-wrapper').classList.add('hidden');
+      document.getElementById('captured-photo-wrapper').classList.remove('flex');
+      document.getElementById('camera-prompt-btn').classList.remove('hidden');
+      document.getElementById('camera-file-input').value = '';
     }
 
     async function submitChecksheet() {
-      if (!state.currentCheckDevice) {
-        showToast('Chưa chọn thiết bị nào!', true);
-        return;
-      }
+      if (!state.currentCheckDevice) { showToast('Chưa chọn thiết bị nào!', true); return; }
+      if (!state.capturedPhotoDataUrl) { showToast('BẮT BUỘC chụp ảnh thiết bị tại hiện trường!', true); return; }
 
-      if (!state.capturedPhotoDataUrl) {
-        showToast('BẮT BUỘC chụp ảnh thiết bị tại hiện trường trước khi gửi!', true);
-        return;
-      }
-
-      const itemsContainer = document.getElementById('checksheet-items-list');
-      const radioGroups = itemsContainer.querySelectorAll('div.p-3');
+      const radioGroups = document.getElementById('checksheet-items-list').querySelectorAll('div.p-3');
       const checklistResult = {};
       let hasNG = false;
 
       for (let i = 0; i < radioGroups.length; i++) {
         const checkedRadio = document.querySelector(`input[name="check_item_${i}"]:checked`);
-        if (!checkedRadio) {
-          showToast('Vui lòng hoàn thành tất cả các mục kiểm tra (*)', true);
-          return;
-        }
+        if (!checkedRadio) { showToast('Vui lòng hoàn thành tất cả các mục kiểm tra (*)', true); return; }
         const itemLabel = radioGroups[i].querySelector('.font-medium').innerText.replace('*', '').trim();
         checklistResult[itemLabel] = checkedRadio.value;
-        if (checkedRadio.value === 'NG') {
-          hasNG = true;
-        }
+        if (checkedRadio.value === 'NG') hasNG = true;
       }
 
       const submitBtn = document.getElementById('btn-submit-checksheet');
-      const origHtml = submitBtn ? submitBtn.innerHTML : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải ảnh & đồng bộ Cloud...';
-      }
+      const origHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải ảnh & đồng bộ Cloud...';
 
       try {
-        const notes = document.getElementById('checksheet-notes') ? document.getElementById('checksheet-notes').value.trim() : '';
+        const notes = document.getElementById('checksheet-notes').value.trim();
         const now = new Date();
         const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
         const inspectionMonth = state.checkerActiveMonth || (now.getMonth() + 1);
         const inspectionYear = state.checkerActiveYear || now.getFullYear();
         const inspectionId = 'INS-' + Date.now();
 
-        const photoUrl = await uploadPhotoToSupabaseStorage(
-          state.capturedPhotoDataUrl,
-          state.currentCheckDevice.code,
-          inspectionId
-        );
+        const photoUrl = await uploadPhotoToSupabaseStorage(state.capturedPhotoDataUrl, state.currentCheckDevice.code, inspectionId);
 
         const newInspection = {
           id: inspectionId,
@@ -2850,25 +2955,22 @@
           status: hasNG ? 'NG' : 'OK',
           photo: photoUrl,
           checklist: checklistResult,
-          notes: notes
+          notes
         };
 
         state.inspections.unshift(newInspection);
         await cloudSaveInspection(newInspection);
 
-        showToast(`Đã lưu lên Supabase Tháng ${inspectionMonth}/${inspectionYear}: ${newInspection.status}!`);
+        showToast(`Đã lưu Tháng ${inspectionMonth}/${inspectionYear}: ${newInspection.status}!`);
         document.getElementById('checksheet-form-card').classList.add('hidden');
         removeCapturedPhoto();
         state.currentCheckDevice = null;
         renderCheckerPendingDevices();
       } catch (err) {
-        console.error("Submit checksheet error:", err);
-        showToast('Lỗi khi tải dữ liệu lên Supabase: ' + err.message, true);
+        showToast('Lỗi tải dữ liệu lên Supabase: ' + err.message, true);
       } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = origHtml;
-        }
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
       }
     }
 
@@ -2876,24 +2978,15 @@
        GUEST / AUDITOR SUBSYSTEM
        ======================================================== */
     function searchGuestDeviceHistory(codeToSearch = null) {
-      const code = (codeToSearch || (document.getElementById('guest-input-code') ? document.getElementById('guest-input-code').value : '')).trim();
+      const code = (codeToSearch || document.getElementById('guest-input-code')?.value || '').trim();
       const container = document.getElementById('guest-history-results');
-      if (!container) return;
-
-      if (!code) {
-        showToast('Vui lòng nhập hoặc quét mã thiết bị!', true);
-        return;
-      }
+      if (!code) { showToast('Vui lòng nhập hoặc quét mã thiết bị!', true); return; }
 
       const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
       const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
 
       if (!dev && devInspections.length === 0) {
-        container.innerHTML = `
-          <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-            Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${escapeHtml(code)}</b>
-          </div>
-        `;
+        container.innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${escapeHtml(code)}</b></div>`;
         return;
       }
 
@@ -2901,24 +2994,21 @@
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">
-                ${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}
-              </span>
+              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}</span>
               <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(code)}</h4>
               <p class="text-xs text-slate-500">${dev ? `${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}` : 'Chưa có thông tin vị trí'}</p>
             </div>
             <span class="text-xs font-bold text-slate-400">Đã kiểm tra: ${devInspections.length} lần</span>
           </div>
-
           <div class="space-y-3">
             <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch Sử Kiểm Tra Gần Nhất</h5>
-            ${devInspections.length === 0 ? '<div class="text-xs text-slate-400 italic">Chưa có lượt checksheet nào trong hệ thống.</div>' : ''}
+            ${devInspections.length === 0 ? '<div class="text-xs text-slate-400 italic">Chưa có lượt checksheet nào.</div>' : ''}
             ${devInspections.map(ins => `
               <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'} flex flex-col sm:flex-row gap-3 text-xs">
-                ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${escapeHtml(ins.photo)}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
+                ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank"><img src="${escapeHtml(ins.photo)}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start" alt="Evidence"></a>` : ''}
                 <div class="space-y-1 flex-1">
                   <div class="flex items-center justify-between">
-                    <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} text-xs flex items-center gap-1.5">
+                    <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1.5">
                       <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Trạng thái: ${escapeHtml(ins.status)}
                     </span>
                     <span class="text-[11px] text-slate-400 font-mono">${escapeHtml(ins.timestamp)}</span>
