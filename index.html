@@ -793,7 +793,7 @@
       <div class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
         <div id="history-modal-device-info" class="p-3 bg-slate-50 rounded-xl border border-slate-200"></div>
         <div class="space-y-3">
-          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh Sách Lượt Kiểm Tra</h4>
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh Sách Lượt Kiểm Tra Theo Tháng (Bấm để xem chi tiết)</h4>
           <div id="history-modal-inspections-list" class="space-y-2.5"></div>
         </div>
       </div>
@@ -1093,7 +1093,6 @@
       };
     }
 
-    // Toàn bộ dữ liệu khởi tạo mẫu đã được xóa trống hoàn toàn
     const DEFAULT_CHECKERS = [];
     const DEFAULT_DEVICES = [];
     const DEFAULT_INSPECTIONS = [];
@@ -2010,39 +2009,120 @@
       });
     }
 
+    /* ========================================================
+       LỊCH SỬ CHECKSHEET THEO TỪNG THÁNG (OK/NG + XEM CHI TIẾT)
+       ======================================================== */
+    function buildMonthlyHistoryHtml(devInspections, prefixId = 'hist') {
+      if (!devInspections || devInspections.length === 0) {
+        return `<div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">Chưa có lịch sử kiểm tra định kỳ cho thiết bị này.</div>`;
+      }
+
+      const sorted = [...devInspections].sort((a, b) => {
+        if (b.year !== a.year) return b.year - a.year;
+        if (b.month !== a.month) return b.month - a.month;
+        return String(b.timestamp).localeCompare(String(a.timestamp));
+      });
+
+      return sorted.map((ins, idx) => {
+        const detailId = `${prefixId}_detail_${idx}_${ins.id}`;
+        const iconId = `${prefixId}_icon_${idx}_${ins.id}`;
+        const isOK = ins.status === 'OK';
+        const checklistEntries = Object.entries(ins.checklist || {});
+        const ngCount = checklistEntries.filter(([, val]) => val === 'NG').length;
+
+        const checklistHtml = checklistEntries.length === 0
+          ? `<div class="text-[11px] text-slate-400 italic">Không có dữ liệu chi tiết từng hạng mục.</div>`
+          : checklistEntries.map(([label, val]) => {
+              const itemIsNG = val === 'NG';
+              return `
+                <div class="flex items-center justify-between gap-2 p-2 rounded-lg border text-[11px] ${itemIsNG ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-white border-slate-200 text-slate-700'}">
+                  <span class="flex-1 leading-snug">${escapeHtml(label)}</span>
+                  <span class="px-2 py-0.5 rounded font-black text-[10px] shrink-0 ${itemIsNG ? 'bg-rose-600 text-white' : 'bg-emerald-100 text-emerald-700'}">
+                    ${escapeHtml(val)}
+                  </span>
+                </div>
+              `;
+            }).join('');
+
+        return `
+          <div class="rounded-xl border overflow-hidden ${isOK ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-300 bg-rose-50/40'}">
+            <button type="button" onclick="toggleHistoryMonthDetail('${detailId}', '${iconId}')" class="w-full px-3.5 py-3 flex items-center justify-between gap-2 text-left hover:bg-white/60 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-black ${isOK ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">
+                  Tháng ${String(ins.month).padStart(2, '0')}/${ins.year}
+                </span>
+                <div>
+                  <div class="text-xs font-bold ${isOK ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1">
+                    <i class="fas ${isOK ? 'fa-check-circle' : 'fa-triangle-exclamation'}"></i>
+                    ${isOK ? 'ĐẠT (OK)' : `KHÔNG ĐẠT (NG${ngCount > 0 ? ` - ${ngCount} mục lỗi` : ''})`}
+                  </div>
+                  <div class="text-[10px] text-slate-500">
+                    Checker: <b>${escapeHtml(ins.checkerName)}</b> • <span class="font-mono">${escapeHtml(ins.timestamp)}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 shrink-0">
+                <span class="hidden sm:inline">Chi tiết</span>
+                <i id="${iconId}" class="fas fa-chevron-down transition-transform duration-200"></i>
+              </div>
+            </button>
+
+            <div id="${detailId}" class="hidden px-3.5 pb-3.5 pt-2 border-t ${isOK ? 'border-emerald-200/70' : 'border-rose-200'} bg-white/80 space-y-3">
+              <div class="space-y-1.5">
+                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Chi tiết các hạng mục kiểm tra:</div>
+                ${checklistHtml}
+              </div>
+
+              ${ins.notes ? `
+                <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+                  <b><i class="fas fa-note-sticky mr-1"></i>Ghi chú:</b> ${escapeHtml(ins.notes)}
+                </div>
+              ` : ''}
+
+              ${ins.photo ? `
+                <div class="space-y-1">
+                  <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Ảnh chụp hiện trường:</div>
+                  <a href="${escapeHtml(ins.photo)}" target="_blank" class="inline-block" title="Bấm để xem ảnh phóng to">
+                    <img src="${escapeHtml(ins.photo)}" class="w-24 h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-sm" alt="Evidence">
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleHistoryMonthDetail(detailId, iconId) {
+      const detailEl = document.getElementById(detailId);
+      const iconEl = document.getElementById(iconId);
+      if (!detailEl) return;
+      const isHidden = detailEl.classList.contains('hidden');
+      detailEl.classList.toggle('hidden');
+      if (iconEl) {
+        iconEl.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+    }
+
     function openDeviceHistoryModal(code) {
-      const dev = state.devices.find(d => d.code === code);
-      if (!dev) return;
+      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
+      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
+
+      if (!dev && devInspections.length === 0) {
+        showToast(`Không tìm thấy dữ liệu cho mã thiết bị: ${code}`, true);
+        return;
+      }
 
       document.getElementById('history-modal-device-info').innerHTML = `
         <div class="flex items-center justify-between">
-          <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev.type)}">${escapeHtml(dev.type)}</span>
-          <span class="font-mono font-bold text-slate-800">${escapeHtml(dev.code)}</span>
+          <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}</span>
+          <span class="font-mono font-bold text-slate-800">${escapeHtml(dev ? dev.code : code)}</span>
         </div>
-        <div class="text-[11px] text-slate-600 mt-1.5">${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}</div>
+        <div class="text-[11px] text-slate-600 mt-1.5">${dev ? `${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}` : 'Chưa có thông tin vị trí'}</div>
       `;
 
-      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
       const listEl = document.getElementById('history-modal-inspections-list');
-      if (devInspections.length === 0) {
-        listEl.innerHTML = `<div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">Chưa có lịch sử kiểm tra định kỳ cho thiết bị này.</div>`;
-      } else {
-        listEl.innerHTML = devInspections.map(ins => `
-          <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'} flex gap-3 text-xs">
-            ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank" title="Bấm xem ảnh phóng to"><img src="${escapeHtml(ins.photo)}" class="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0 self-start hover:opacity-90" alt="Evidence"></a>` : ''}
-            <div class="space-y-1 flex-1">
-              <div class="flex items-center justify-between">
-                <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1.5">
-                  <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Kết quả: ${escapeHtml(ins.status)}
-                </span>
-                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(ins.timestamp)}</span>
-              </div>
-              <div class="text-slate-600">Người kiểm tra: <b>${escapeHtml(ins.checkerName)}</b></div>
-              ${ins.notes ? `<div class="text-slate-700 bg-white/80 p-2 rounded border border-slate-200/60 text-[11px]"><b>Ghi chú:</b> ${escapeHtml(ins.notes)}</div>` : ''}
-            </div>
-          </div>
-        `).join('');
-      }
+      listEl.innerHTML = buildMonthlyHistoryHtml(devInspections, 'owner_modal');
 
       const modal = document.getElementById('modal-device-history');
       modal.classList.remove('hidden');
@@ -2768,10 +2848,13 @@
     function onQRCodeScanned(decodedText) {
       toggleQRScannerModal(false);
       const code = decodedText.trim();
-      if (state.activeScannerTarget === 'checker') openChecksheetForDevice(code);
-      else {
-        document.getElementById('guest-input-code').value = code;
+      if (state.activeScannerTarget === 'checker') {
+        openChecksheetForDevice(code);
+      } else {
+        const inputEl = document.getElementById('guest-input-code');
+        if (inputEl) inputEl.value = code;
         searchGuestDeviceHistory(code);
+        openDeviceHistoryModal(code);
       }
     }
 
@@ -2834,7 +2917,6 @@
       else openWebcamModal();
     }
 
-    // Tối ưu nén ảnh: 640px, quality 0.60 (~50-60 KB/ảnh -> lưu ~1.5 năm miễn phí)
     function compressImageDataUrl(dataUrl, maxWidth = 640, quality = 0.60) {
       return new Promise((resolve) => {
         const img = new Image();
@@ -2987,40 +3069,27 @@
 
       if (!dev && devInspections.length === 0) {
         container.innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${escapeHtml(code)}</b></div>`;
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
 
       container.innerHTML = `
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="bg-white p-5 rounded-2xl border-2 border-amber-400 shadow-md space-y-4">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}</span>
-              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(code)}</h4>
+              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(dev ? dev.code : code)}</h4>
               <p class="text-xs text-slate-500">${dev ? `${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}` : 'Chưa có thông tin vị trí'}</p>
             </div>
-            <span class="text-xs font-bold text-slate-400">Đã kiểm tra: ${devInspections.length} lần</span>
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">Đã kiểm tra: ${devInspections.length} lần</span>
           </div>
-          <div class="space-y-3">
-            <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch Sử Kiểm Tra Gần Nhất</h5>
-            ${devInspections.length === 0 ? '<div class="text-xs text-slate-400 italic">Chưa có lượt checksheet nào.</div>' : ''}
-            ${devInspections.map(ins => `
-              <div class="p-3.5 rounded-xl border ${ins.status === 'OK' ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'} flex flex-col sm:flex-row gap-3 text-xs">
-                ${ins.photo ? `<a href="${escapeHtml(ins.photo)}" target="_blank"><img src="${escapeHtml(ins.photo)}" class="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0 self-start" alt="Evidence"></a>` : ''}
-                <div class="space-y-1 flex-1">
-                  <div class="flex items-center justify-between">
-                    <span class="font-bold ${ins.status === 'OK' ? 'text-emerald-700' : 'text-rose-700'} flex items-center gap-1.5">
-                      <i class="fas ${ins.status === 'OK' ? 'fa-check-circle' : 'fa-times-circle'}"></i> Trạng thái: ${escapeHtml(ins.status)}
-                    </span>
-                    <span class="text-[11px] text-slate-400 font-mono">${escapeHtml(ins.timestamp)}</span>
-                  </div>
-                  <div class="text-slate-600">Người kiểm tra: <b>${escapeHtml(ins.checkerName)}</b></div>
-                  ${ins.notes ? `<div class="text-slate-700 bg-white/70 p-2 rounded border border-slate-200/50 text-[11px]"><b>Ghi chú:</b> ${escapeHtml(ins.notes)}</div>` : ''}
-                </div>
-              </div>
-            `).join('')}
+          <div class="space-y-2.5">
+            <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch Sử Checksheet Theo Tháng (Bấm vào từng tháng để xem chi tiết)</h5>
+            ${buildMonthlyHistoryHtml(devInspections, 'guest_panel')}
           </div>
         </div>
       `;
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   </script>
 </body>
