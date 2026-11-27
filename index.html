@@ -1112,8 +1112,41 @@
       webcamStream: null,
       activeScannerTarget: 'checker',
       checkerActiveMonth: new Date().getMonth() + 1,
-      checkerActiveYear: new Date().getFullYear()
+      checkerActiveYear: new Date().getFullYear(),
+      pendingUrlDeviceCode: null,
+      isProcessingQRScan: false
     };
+
+    // Tạo nội dung mã QR: tự động gắn link web (?device=MA) để camera điện thoại thường quét là mở thẳng lịch sử Guest
+    function getDeviceQRPayload(code) {
+      const cleanCode = String(code || '').trim();
+      try {
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+          const baseUrl = window.location.origin + window.location.pathname;
+          return `${baseUrl}?device=${encodeURIComponent(cleanCode)}`;
+        }
+      } catch (e) {}
+      return cleanCode;
+    }
+
+    // Trích xuất mã thiết bị từ nội dung QR (hỗ trợ cả QR chứa Link URL mới lẫn QR chỉ chứa mã thiết bị cũ)
+    function extractDeviceCodeFromQR(rawText) {
+      const text = String(rawText || '').trim();
+      if (!text) return '';
+      try {
+        if (/^https?:\/\//i.test(text)) {
+          const urlObj = new URL(text);
+          const paramCode = urlObj.searchParams.get('device') || urlObj.searchParams.get('code');
+          if (paramCode) return paramCode.trim();
+        }
+      } catch (e) {}
+      // Dự phòng nếu chuỗi có dạng ?device=... hoặc &device=...
+      const match = text.match(/[?&](?:device|code)=([^&#]+)/i);
+      if (match && match[1]) {
+        try { return decodeURIComponent(match[1]).trim(); } catch (e) { return match[1].trim(); }
+      }
+      return text;
+    }
 
     /* ========================================================
        INITIALIZATION & SUPABASE CLOUD SYNC
@@ -1124,12 +1157,37 @@
       populateMonthYearFilters();
       renderCheckerSelectDropdown();
       renderCheckerAccountList();
-      navigateHome();
+
+      // Kiểm tra xem người dùng có quét QR bằng camera điện thoại thường (?device=...) hay không
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlDeviceCode = (urlParams.get('device') || urlParams.get('code') || '').trim();
+
+      if (urlDeviceCode) {
+        state.pendingUrlDeviceCode = urlDeviceCode;
+        state.currentUser = { role: 'GUEST', name: 'Auditor / Khách (GUEST)' };
+        renderAppByRole();
+        const inputEl = document.getElementById('guest-input-code');
+        if (inputEl) inputEl.value = urlDeviceCode;
+        const resultContainer = document.getElementById('guest-history-results');
+        if (resultContainer) {
+          resultContainer.innerHTML = `<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Đang tải lịch sử checksheet thiết bị <b class="font-mono">${escapeHtml(urlDeviceCode)}</b>...</div>`;
+        }
+      } else {
+        navigateHome();
+      }
 
       if (isSupabaseReady) {
         await initSupabaseCloudSync();
       } else {
         updateCloudSyncBadge("offline", "Chế độ Local");
+      }
+
+      // Sau khi đồng bộ xong dữ liệu, tự động bật lịch sử checksheet của thiết bị vừa quét
+      if (state.pendingUrlDeviceCode) {
+        const targetCode = state.pendingUrlDeviceCode;
+        state.pendingUrlDeviceCode = null;
+        searchGuestDeviceHistory(targetCode);
+        openDeviceHistoryModal(targetCode);
       }
     });
 
@@ -2271,7 +2329,7 @@
           const el = document.getElementById(qrId);
           if (el && typeof QRCode !== 'undefined') {
             el.innerHTML = '';
-            new QRCode(el, { text: dev.code, width: 58, height: 58, correctLevel: QRCode.CorrectLevel.M });
+            new QRCode(el, { text: getDeviceQRPayload(dev.code), width: 58, height: 58, correctLevel: QRCode.CorrectLevel.L });
           }
         }, 40);
       });
@@ -2285,7 +2343,7 @@
         tempDiv.style.top = '-9999px';
         document.body.appendChild(tempDiv);
         try {
-          new QRCode(tempDiv, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+          new QRCode(tempDiv, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.L });
           setTimeout(() => {
             const canvas = tempDiv.querySelector('canvas');
             const img = tempDiv.querySelector('img');
@@ -2319,7 +2377,7 @@
 
       const prepared = [];
       for (const dev of state.devices) {
-        const qrDataUrl = await generateQRCodeDataUrl(dev.code, 240);
+        const qrDataUrl = await generateQRCodeDataUrl(getDeviceQRPayload(dev.code), 240);
         prepared.push({ ...dev, qrDataUrl });
       }
 
@@ -2810,7 +2868,10 @@
     }
 
     function toggleQRScannerModal(show = true, target = 'checker') {
-      state.activeScannerTarget = target;
+      if (show) {
+        state.activeScannerTarget = target;
+        state.isProcessingQRScan = false;
+      }
       const modal = document.getElementById('modal-qr-scanner');
       if (show) {
         modal.classList.remove('hidden');
@@ -2846,20 +2907,34 @@
     }
 
     function onQRCodeScanned(decodedText) {
+      if (state.isProcessingQRScan) return;
+      state.isProcessingQRScan = true;
+
+      const targetRole = state.activeScannerTarget;
       toggleQRScannerModal(false);
-      const code = decodedText.trim();
-      if (state.activeScannerTarget === 'checker') {
-        openChecksheetForDevice(code);
-      } else {
-        const inputEl = document.getElementById('guest-input-code');
-        if (inputEl) inputEl.value = code;
-        searchGuestDeviceHistory(code);
-        openDeviceHistoryModal(code);
+
+      const code = extractDeviceCodeFromQR(decodedText);
+      if (!code) {
+        showToast('Mã QR không hợp lệ!', true);
+        state.isProcessingQRScan = false;
+        return;
       }
+
+      setTimeout(() => {
+        if (targetRole === 'checker') {
+          openChecksheetForDevice(code);
+        } else {
+          const inputEl = document.getElementById('guest-input-code');
+          if (inputEl) inputEl.value = code;
+          searchGuestDeviceHistory(code);
+          openDeviceHistoryModal(code);
+        }
+        state.isProcessingQRScan = false;
+      }, 150);
     }
 
     function openChecksheetForDevice(code) {
-      const dev = state.devices.find(d => d.code === code);
+      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
       if (!dev) { showToast(`Không tìm thấy dữ liệu cho mã ${code}!`, true); return; }
       state.currentCheckDevice = dev;
       const card = document.getElementById('checksheet-form-card');
