@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EHS BOYD by EATON - FIRE Checksheet System</title>
+  <title>EHS BOYD by EATON - FIRE Checksheet Platform</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -555,21 +555,29 @@
 
     <!-- ================= VIEW 4: GUEST / AUDITOR WORKSPACE ================= -->
     <section id="section-guest" class="space-y-6 hidden">
-      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-3">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu &amp; Báo Cáo Tổng Hợp (TOTAL)</span>
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Cổng Dành Cho AUDITOR Tra Cứu &amp; Báo Cáo Tổng Hợp (TOTAL)</span>
+          </div>
+          <button onclick="refreshGuestDataFromCloud()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-all">
+            <i class="fas fa-rotate"></i> Đồng bộ dữ liệu mới nhất
+          </button>
         </div>
-        <button onclick="toggleQRScannerModal(true, 'guest')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow flex items-center gap-2 transition-all">
-          <i class="fas fa-qrcode"></i> Quét QR Tra Cứu Thiết Bị
-        </button>
-      </div>
 
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
-        <input type="text" id="guest-input-code" placeholder="Nhập mã thiết bị (ví dụ: B1-FF-2F-001)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500">
-        <button onclick="searchGuestDeviceHistory()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs">
-          Tìm Kiếm
-        </button>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div class="flex-1 flex items-center gap-2">
+            <input type="text" id="guest-input-code" list="guest-device-codes-datalist" onkeydown="if(event.key==='Enter') searchGuestDeviceHistory()" placeholder="Nhập hoặc chọn mã thiết bị (VD: B1-FF-2F-001)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-mono outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white">
+            <datalist id="guest-device-codes-datalist"></datalist>
+            <button onclick="searchGuestDeviceHistory()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shrink-0 flex items-center gap-1.5">
+              <i class="fas fa-search"></i> Tìm Kiếm
+            </button>
+          </div>
+          <button onclick="toggleQRScannerModal(true, 'guest')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center justify-center gap-2 transition-all shrink-0">
+            <i class="fas fa-qrcode text-sm"></i> Quét QR Tra Cứu Thiết Bị
+          </button>
+        </div>
       </div>
 
       <div id="guest-history-results"></div>
@@ -924,7 +932,7 @@
   <!-- ================= FOOTER ================= -->
   <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-      EHS Department &copy; 2026 <b>EHS BOYD by EATON</b> • Fire Equipment Inspection Platform
+      EHS Department &copy; 2026 <b>EHS BOYD by EATON</b> • EHS Platform design by Adward Do
     </div>
   </footer>
 
@@ -1129,9 +1137,22 @@
       return cleanCode;
     }
 
-    // Trích xuất mã thiết bị từ nội dung QR (hỗ trợ cả QR chứa Link URL mới lẫn QR chỉ chứa mã thiết bị cũ)
+    function normalizeCode(val) {
+      return String(val || '').trim().toLowerCase();
+    }
+
+    function syncGuestDeviceDatalist() {
+      const dl = document.getElementById('guest-device-codes-datalist');
+      if (!dl) return;
+      dl.innerHTML = state.devices
+        .filter(d => d && d.code)
+        .map(d => `<option value="${escapeHtml(d.code)}">${escapeHtml(d.type || '')} - ${escapeHtml(d.workshop || '')} ${escapeHtml(d.location || '')}</option>`)
+        .join('');
+    }
+
+    // Trích xuất mã thiết bị từ nội dung QR (hỗ trợ Link URL mới, mã cũ, mã có xuống dòng/khoảng trắng hoặc chứa trong chuỗi dài)
     function extractDeviceCodeFromQR(rawText) {
-      const text = String(rawText || '').trim();
+      const text = String(rawText || '').replace(/\r|\n/g, ' ').trim();
       if (!text) return '';
       try {
         if (/^https?:\/\//i.test(text)) {
@@ -1140,11 +1161,18 @@
           if (paramCode) return paramCode.trim();
         }
       } catch (e) {}
-      // Dự phòng nếu chuỗi có dạng ?device=... hoặc &device=...
-      const match = text.match(/[?&](?:device|code)=([^&#]+)/i);
+      const match = text.match(/[?&](?:device|code)=([^&#\s]+)/i);
       if (match && match[1]) {
         try { return decodeURIComponent(match[1]).trim(); } catch (e) { return match[1].trim(); }
       }
+      // Nếu khớp chính xác một thiết bị đang có
+      const lowerText = text.toLowerCase();
+      const exactDev = state.devices.find(d => d && d.code && normalizeCode(d.code) === lowerText);
+      if (exactDev) return exactDev.code;
+      // Nếu tem QR cũ chứa nhiều thông tin (VD: "B1-FF-2F-001 | Xưởng 1"), dò mã thiết bị nằm bên trong chuỗi
+      const sortedByLen = [...state.devices].filter(d => d && d.code).sort((a, b) => String(b.code).length - String(a.code).length);
+      const containedDev = sortedByLen.find(d => lowerText.includes(normalizeCode(d.code)));
+      if (containedDev) return containedDev.code;
       return text;
     }
 
@@ -1154,6 +1182,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       loadDataFromLocalStorage();
       syncDeviceTypeDropdowns();
+      syncGuestDeviceDatalist();
       populateMonthYearFilters();
       renderCheckerSelectDropdown();
       renderCheckerAccountList();
@@ -1325,6 +1354,7 @@
 
       saveLocalBackup();
       syncDeviceTypeDropdowns();
+      syncGuestDeviceDatalist();
       renderCheckerSelectDropdown();
       renderCheckerAccountList();
       refreshActiveViews();
@@ -1732,6 +1762,25 @@
       state.currentUser = { role: 'GUEST', name: 'Auditor / Khách (GUEST)' };
       showToast('Đang truy cập với quyền AUDITOR...');
       renderAppByRole();
+      if (isSupabaseReady && supabaseClient) {
+        fetchAllSupabaseData().catch(() => {});
+      }
+    }
+
+    async function refreshGuestDataFromCloud() {
+      if (!isSupabaseReady || !supabaseClient) {
+        showToast('Đang chạy chế độ Local (chưa kết nối Supabase).', true);
+        return;
+      }
+      try {
+        showToast('Đang đồng bộ dữ liệu từ Supabase...');
+        await fetchAllSupabaseData();
+        const curInput = (document.getElementById('guest-input-code')?.value || '').trim();
+        if (curInput) searchGuestDeviceHistory(curInput, false);
+        showToast(`Đã đồng bộ xong (${state.devices.length} thiết bị, ${state.inspections.length} lượt kiểm tra).`);
+      } catch (err) {
+        showToast('Lỗi đồng bộ dữ liệu: ' + err.message, true);
+      }
     }
 
     function navigateHome() {
@@ -2082,8 +2131,9 @@
       });
 
       return sorted.map((ins, idx) => {
-        const detailId = `${prefixId}_detail_${idx}_${ins.id}`;
-        const iconId = `${prefixId}_icon_${idx}_${ins.id}`;
+        const safeId = String(ins.id || idx).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const detailId = `${prefixId}_detail_${idx}_${safeId}`;
+        const iconId = `${prefixId}_icon_${idx}_${safeId}`;
         const isOK = ins.status === 'OK';
         const checklistEntries = Object.entries(ins.checklist || {});
         const ngCount = checklistEntries.filter(([, val]) => val === 'NG').length;
@@ -2163,8 +2213,10 @@
     }
 
     function openDeviceHistoryModal(code) {
-      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
-      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
+      const norm = normalizeCode(code);
+      if (!norm) return;
+      const dev = state.devices.find(d => d && normalizeCode(d.code) === norm);
+      const devInspections = state.inspections.filter(i => i && normalizeCode(i.deviceCode) === norm);
 
       if (!dev && devInspections.length === 0) {
         showToast(`Không tìm thấy dữ liệu cho mã thiết bị: ${code}`, true);
@@ -2884,57 +2936,76 @@
       }
     }
 
-    function startCameraQRScanner() {
-      if (typeof Html5Qrcode === 'undefined') { showToast('Trình quét mã QR đang khởi động...', true); return; }
-      if (state.html5QrCodeScanner) {
-        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => { state.html5QrCodeScanner = null; });
+    async function stopCameraQRScanner() {
+      const scanner = state.html5QrCodeScanner;
+      state.html5QrCodeScanner = null;
+      if (scanner) {
+        try {
+          await scanner.stop();
+        } catch (e) {}
+        try {
+          scanner.clear();
+        } catch (e) {}
       }
-      state.html5QrCodeScanner = new Html5Qrcode('qr-reader');
-      state.html5QrCodeScanner.start(
+    }
+
+    async function startCameraQRScanner() {
+      if (typeof Html5Qrcode === 'undefined') { showToast('Trình quét mã QR đang khởi động...', true); return; }
+      await stopCameraQRScanner();
+      const readerEl = document.getElementById('qr-reader');
+      if (readerEl) readerEl.innerHTML = '';
+
+      const scanner = new Html5Qrcode('qr-reader');
+      state.html5QrCodeScanner = scanner;
+      scanner.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 220, height: 220 } },
         (decodedText) => onQRCodeScanned(decodedText),
         () => {}
       ).catch(() => {
-        document.getElementById('qr-reader').innerHTML = `<div class="p-4 text-center text-xs text-rose-300">Không thể truy cập camera trực tiếp.<br>Vui lòng cấp quyền máy ảnh trên trình duyệt (chạy trên HTTPS).</div>`;
+        if (readerEl) {
+          readerEl.innerHTML = `<div class="p-4 text-center text-xs text-rose-300">Không thể truy cập camera trực tiếp.<br>Vui lòng cấp quyền máy ảnh trên trình duyệt (chạy trên HTTPS).</div>`;
+        }
       });
     }
 
-    function stopCameraQRScanner() {
-      if (state.html5QrCodeScanner) {
-        state.html5QrCodeScanner.stop().catch(() => {}).finally(() => { state.html5QrCodeScanner = null; });
-      }
-    }
-
-    function onQRCodeScanned(decodedText) {
+    async function onQRCodeScanned(decodedText) {
       if (state.isProcessingQRScan) return;
       state.isProcessingQRScan = true;
 
       const targetRole = state.activeScannerTarget;
-      toggleQRScannerModal(false);
+      await stopCameraQRScanner();
+      const qrModal = document.getElementById('modal-qr-scanner');
+      if (qrModal) {
+        qrModal.classList.add('hidden');
+        qrModal.classList.remove('flex');
+      }
 
-      const code = extractDeviceCodeFromQR(decodedText);
+      // Nếu dữ liệu chưa kịp tải từ Cloud, tự động tải ngay trước khi tra cứu
+      if (isSupabaseReady && supabaseClient && (state.devices.length === 0 || state.inspections.length === 0)) {
+        try { await fetchAllSupabaseData(); } catch (e) {}
+      }
+
+      const rawText = String(decodedText || '').trim();
+      const code = extractDeviceCodeFromQR(rawText);
       if (!code) {
         showToast('Mã QR không hợp lệ!', true);
         state.isProcessingQRScan = false;
         return;
       }
 
-      setTimeout(() => {
-        if (targetRole === 'checker') {
-          openChecksheetForDevice(code);
-        } else {
-          const inputEl = document.getElementById('guest-input-code');
-          if (inputEl) inputEl.value = code;
-          searchGuestDeviceHistory(code);
-          openDeviceHistoryModal(code);
-        }
-        state.isProcessingQRScan = false;
-      }, 150);
+      if (targetRole === 'checker') {
+        openChecksheetForDevice(code);
+      } else {
+        const inputEl = document.getElementById('guest-input-code');
+        if (inputEl) inputEl.value = code;
+        await searchGuestDeviceHistory(code, true, rawText);
+      }
+      state.isProcessingQRScan = false;
     }
 
     function openChecksheetForDevice(code) {
-      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
+      const dev = state.devices.find(d => d && normalizeCode(d.code) === normalizeCode(code));
       if (!dev) { showToast(`Không tìm thấy dữ liệu cho mã ${code}!`, true); return; }
       state.currentCheckDevice = dev;
       const card = document.getElementById('checksheet-form-card');
@@ -3134,29 +3205,49 @@
     /* ========================================================
        GUEST / AUDITOR SUBSYSTEM
        ======================================================== */
-    function searchGuestDeviceHistory(codeToSearch = null) {
-      const code = (codeToSearch || document.getElementById('guest-input-code')?.value || '').trim();
+    async function searchGuestDeviceHistory(codeToSearch = null, openModalAlso = false, rawQrDebug = '') {
+      const rawInput = (codeToSearch !== null ? codeToSearch : (document.getElementById('guest-input-code')?.value || '')).trim();
+      const code = extractDeviceCodeFromQR(rawInput);
       const container = document.getElementById('guest-history-results');
       if (!code) { showToast('Vui lòng nhập hoặc quét mã thiết bị!', true); return; }
 
-      const dev = state.devices.find(d => d.code.toLowerCase() === code.toLowerCase());
-      const devInspections = state.inspections.filter(i => i.deviceCode.toLowerCase() === code.toLowerCase());
+      // Nếu dữ liệu local đang trống mà có kết nối Cloud, tự tải trước
+      if (isSupabaseReady && supabaseClient && state.devices.length === 0 && state.inspections.length === 0) {
+        try { await fetchAllSupabaseData(); } catch (e) {}
+      }
+
+      const norm = normalizeCode(code);
+      const dev = state.devices.find(d => d && normalizeCode(d.code) === norm);
+      const devInspections = state.inspections.filter(i => i && normalizeCode(i.deviceCode) === norm);
 
       if (!dev && devInspections.length === 0) {
-        container.innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">Không tìm thấy thông tin và lịch sử checksheet cho mã: <b>${escapeHtml(code)}</b></div>`;
+        const debugInfo = rawQrDebug && rawQrDebug !== code
+          ? `<div class="mt-1 text-[11px] text-rose-600/80 font-mono break-all">Nội dung QR gốc: ${escapeHtml(rawQrDebug)}</div>`
+          : '';
+        container.innerHTML = `
+          <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 space-y-1">
+            <div><i class="fas fa-circle-exclamation mr-1"></i> Không tìm thấy thông tin và lịch sử checksheet cho mã: <b class="font-mono">${escapeHtml(code)}</b></div>
+            ${debugInfo}
+            <div class="text-[11px] text-slate-500">Hiện hệ thống đang có <b>${state.devices.length}</b> thiết bị và <b>${state.inspections.length}</b> lượt kiểm tra.</div>
+          </div>
+        `;
+        showToast(`Không tìm thấy thiết bị mã: ${code}`, true);
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
 
+      const displayCode = dev ? dev.code : code;
       container.innerHTML = `
         <div class="bg-white p-5 rounded-2xl border-2 border-amber-400 shadow-md space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100">
             <div>
               <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${getDeviceTypeBadgeClass(dev ? dev.type : 'Bình bột ABC')}">${escapeHtml(dev ? dev.type : 'Thiết bị PCCC')}</span>
-              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(dev ? dev.code : code)}</h4>
+              <h4 class="text-sm font-mono font-black text-slate-800 mt-1">${escapeHtml(displayCode)}</h4>
               <p class="text-xs text-slate-500">${dev ? `${escapeHtml(dev.workshop)} • ${escapeHtml(dev.location)}` : 'Chưa có thông tin vị trí'}</p>
             </div>
-            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">Đã kiểm tra: ${devInspections.length} lần</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">Đã kiểm tra: ${devInspections.length} lần</span>
+            </div>
           </div>
           <div class="space-y-2.5">
             <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch Sử Checksheet Theo Tháng (Bấm vào từng tháng để xem chi tiết)</h5>
@@ -3164,6 +3255,10 @@
           </div>
         </div>
       `;
+
+      if (openModalAlso) {
+        openDeviceHistoryModal(displayCode);
+      }
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   </script>
